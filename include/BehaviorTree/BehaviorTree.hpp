@@ -362,7 +362,8 @@ public:
         auto child = std::make_shared<CompositeType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
         m_node->addChild(child);
-        return CompositeBuilder<CompositeBuilder<Parent>>(this, (CompositeType*)child.get());
+        return CompositeBuilder<CompositeBuilder<Parent>>(
+            this, reinterpret_cast<CompositeType*>(child.get()));
     }
 
     template <class DecoratorType, typename... Args>
@@ -371,7 +372,8 @@ public:
         auto child = std::make_shared<DecoratorType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
         m_node->addChild(child);
-        return DecoratorBuilder<CompositeBuilder<Parent>>(this, (DecoratorType*)child.get());
+        return DecoratorBuilder<CompositeBuilder<Parent>>(
+            this, reinterpret_cast<DecoratorType*>(child.get()));
     }
 
     Parent& end()
@@ -411,7 +413,8 @@ public:
         auto child = std::make_shared<CompositeType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
         m_node->setChild(child);
-        return CompositeBuilder<DecoratorBuilder<Parent>>(this, (CompositeType*)child.get());
+        return CompositeBuilder<DecoratorBuilder<Parent>>(
+            this, reinterpret_cast<CompositeType*>(child.get()));
     }
 
     template <class DecoratorType, typename... Args>
@@ -420,7 +423,8 @@ public:
         auto child = std::make_shared<DecoratorType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
         m_node->setChild(child);
-        return DecoratorBuilder<DecoratorBuilder<Parent>>(this, (DecoratorType*)child.get());
+        return DecoratorBuilder<DecoratorBuilder<Parent>>(
+            this, reinterpret_cast<DecoratorType*>(child.get()));
     }
 
     Parent& end()
@@ -809,7 +813,8 @@ public:
     {
         m_root = std::make_shared<CompositeType>((args)...);
         m_root->setBlackboard(m_tree->getBlackboard());
-        return CompositeBuilder<Builder>(this, (CompositeType*)m_root.get());
+        return CompositeBuilder<Builder>(
+            this, reinterpret_cast<CompositeType*>(m_root.get()));
     }
 
     template <class DecoratorType, typename... Args>
@@ -817,7 +822,8 @@ public:
     {
         m_root = std::make_shared<DecoratorType>((args)...);
         m_root->setBlackboard(m_tree->getBlackboard());
-        return DecoratorBuilder<Builder>(this, (DecoratorType*)m_root.get());
+        return DecoratorBuilder<Builder>(
+            this, reinterpret_cast<DecoratorType*>(m_root.get()));
     }
 
     Node::Ptr build()
