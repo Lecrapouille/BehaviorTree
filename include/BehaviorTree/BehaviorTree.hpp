@@ -62,111 +62,65 @@ class Blackboard
 {
 public:
 
-    void setBool(std::string key, bool value)
-    {
-        bools[key] = value;
-    }
-
-    bool getBool(std::string key)
-    {
-        if (bools.find(key) == bools.end())
-        {
-            bools[key] = false;
-        }
-        return bools[key];
-    }
-
-    bool hasBool(std::string key) const
-    {
-        return bools.find(key) != bools.end();
-    }
-
-    void setInt(std::string key, int value)
-    {
-        ints[key] = value;
-    }
-
-    int getInt(std::string key)
-    {
-        if (ints.find(key) == ints.end())
-        {
-            ints[key] = 0;
-        }
-        return ints[key];
-    }
-
-    bool hasInt(std::string key) const
-    {
-        return ints.find(key) != ints.end();
-    }
-
-    void setFloat(std::string key, float value)
-    {
-        floats[key] = value;
-    }
-
-    float getFloat(std::string key)
-    {
-        if (floats.find(key) == floats.end())
-        {
-            floats[key] = 0.0f;
-        }
-        return floats[key];
-    }
-
-    bool hasFloat(std::string key) const
-    {
-        return floats.find(key) != floats.end();
-    }
-
-    void setDouble(std::string key, double value)
-    {
-        doubles[key] = value;
-    }
-
-    double getDouble(std::string key)
-    {
-        if (doubles.find(key) == doubles.end())
-        {
-            doubles[key] = 0.0f;
-        }
-        return doubles[key];
-    }
-
-    bool hasDouble(std::string key) const
-    {
-        return doubles.find(key) != doubles.end();
-    }
-
-    void setString(std::string key, std::string value)
-    {
-        strings[key] = value;
-    }
-
-    std::string getString(std::string key)
-    {
-        if (strings.find(key) == strings.end())
-        {
-            strings[key] = "";
-        }
-        return strings[key];
-    }
-
-    bool hasString(std::string key) const
-    {
-        return strings.find(key) != strings.end();
-    }
-
+    template<class T> using Entry = std::map<std::string, T>;
     using Ptr = std::shared_ptr<Blackboard>;
 
-protected:
+    ~BlackBoard() { erase(); }
 
-    std::unordered_map<std::string, bool> bools;
-    std::unordered_map<std::string, int> ints;
-    std::unordered_map<std::string, float> floats;
-    std::unordered_map<std::string, double> doubles;
-    std::unordered_map<std::string, std::string> strings;
+    template<class T> void set(std::string const& key, T const& val)
+    {
+        entries<T>()[key] = val;
+    }
+
+    template<class T> T get(std::string const& key) const
+    {
+        return entries<T>().at(key);
+    }
+
+    template<class T>
+    inline Entry<T>& entries() const
+    {
+        return m_maps<T>.at(this);
+    }
+
+private:
+
+    template<class T>
+    Entry<T>& entries()
+    {
+        auto it = m_maps<T>.find(this);
+        if (it == std::end(m_maps<T>))
+        {
+            // Hold list of created heterogeneous maps for their destruction
+            m_erase_functions.emplace_back([](BlackBoard& blackboard)
+            {
+                m_maps<T>.erase(&blackboard);
+            });
+
+            return m_maps<T>[this];
+        }
+        return it->second;
+    }
+
+    // Destroy all created heterogeneous stacks
+    void erase()
+    {
+        for (auto&& erase_func : m_erase_functions)
+        {
+            erase_func(*this);
+        }
+    }
+
+private:
+
+    template<class T>
+    static std::unordered_map<const BlackBoard*, Entry<T>> m_maps;
+
+    std::vector<std::function<void(BlackBoard&)>> m_erase_functions;
 };
+
+template<class T>
+std::unordered_map<const BlackBoard*, BlackBoard::Entry<T>> BlackBoard::m_maps;
 
 // ****************************************************************************
 //! \brief
