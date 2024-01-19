@@ -4,10 +4,11 @@
 class Action : public bt::Node
 {
 public:
-    Status update() override
+
+    virtual bt::Status update() override
     {
         std::cout << "Hello, World!" << std::endl;
-        return bt::Node::Status::Success;
+        return bt::Status::SUCCESS;
     }
 };
 
