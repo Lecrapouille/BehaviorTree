@@ -348,7 +348,7 @@ public:
     {}
 
     template <class NodeType, typename... Args>
-    CompositeBuilder<Parent> leaf(Args... args)
+    CompositeBuilder<Parent> leaf(Args&&... args)
     {
         auto child = std::make_shared<NodeType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
@@ -357,7 +357,7 @@ public:
     }
 
     template <class CompositeType, typename... Args>
-    CompositeBuilder<CompositeBuilder<Parent>> composite(Args... args)
+    CompositeBuilder<CompositeBuilder<Parent>> composite(Args&&... args)
     {
         auto child = std::make_shared<CompositeType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
@@ -366,7 +366,7 @@ public:
     }
 
     template <class DecoratorType, typename... Args>
-    DecoratorBuilder<CompositeBuilder<Parent>> decorator(Args... args)
+    DecoratorBuilder<CompositeBuilder<Parent>> decorator(Args&&... args)
     {
         auto child = std::make_shared<DecoratorType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
@@ -397,7 +397,7 @@ public:
     {}
 
     template <class NodeType, typename... Args>
-    DecoratorBuilder<Parent> leaf(Args... args)
+    DecoratorBuilder<Parent> leaf(Args&&... args)
     {
         auto child = std::make_shared<NodeType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
@@ -406,7 +406,7 @@ public:
     }
 
     template <class CompositeType, typename... Args>
-    CompositeBuilder<DecoratorBuilder<Parent>> composite(Args... args)
+    CompositeBuilder<DecoratorBuilder<Parent>> composite(Args&&... args)
     {
         auto child = std::make_shared<CompositeType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
@@ -415,7 +415,7 @@ public:
     }
 
     template <class DecoratorType, typename... Args>
-    DecoratorBuilder<DecoratorBuilder<Parent>> decorator(Args... args)
+    DecoratorBuilder<DecoratorBuilder<Parent>> decorator(Args&&... args)
     {
         auto child = std::make_shared<DecoratorType>((args)...);
         child->setBlackboard(m_node->getBlackboard());
@@ -797,7 +797,7 @@ public:
     }
 
     template <class NodeType, typename... Args>
-    Builder leaf(Args... args)
+    Builder leaf(Args&&... args)
     {
         m_root = std::make_shared<NodeType>((args)...);
         m_root->setBlackboard(m_tree->getBlackboard());
@@ -805,7 +805,7 @@ public:
     }
 
     template <class CompositeType, typename... Args>
-    CompositeBuilder<Builder> composite(Args... args)
+    CompositeBuilder<Builder> composite(Args&&... args)
     {
         m_root = std::make_shared<CompositeType>((args)...);
         m_root->setBlackboard(m_tree->getBlackboard());
@@ -813,7 +813,7 @@ public:
     }
 
     template <class DecoratorType, typename... Args>
-    DecoratorBuilder<Builder> decorator(Args... args)
+    DecoratorBuilder<Builder> decorator(Args&&... args)
     {
         m_root = std::make_shared<DecoratorType>((args)...);
         m_root->setBlackboard(m_tree->getBlackboard());
