@@ -33,13 +33,14 @@
 //
 //*****************************************************************************
 
-#pragma once
+#ifndef BEHAVIOR_TREE_HPP
+#  define BEHAVIOR_TREE_HPP
 
-#include <memory>
-#include <vector>
-#include <string>
-#include <unordered_map>
-#include <cassert>
+#  include <memory>
+#  include <vector>
+#  include <string>
+#  include <unordered_map>
+#  include <cassert>
 
 namespace BrainTree
 {
@@ -615,4 +616,6 @@ public:
     }
 };
 
-} // namespace BrainTree
+} // namespace BehaviorTree
+
+#endif
