@@ -42,7 +42,7 @@
 #  include <unordered_map>
 #  include <cassert>
 
-namespace BrainTree
+namespace bt
 {
 
 class Blackboard
