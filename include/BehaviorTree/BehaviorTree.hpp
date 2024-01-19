@@ -161,10 +161,10 @@ class Composite : public Node
 {
 public:
     virtual ~Composite() {}
-    
+
     void addChild(Node::Ptr child) { children.push_back(child); it=children.begin(); }
     bool hasChildren() const { return !children.empty(); }
-    
+
 protected:
     std::vector<Node::Ptr> children;
     std::vector<Node::Ptr>::iterator it;
@@ -177,7 +177,7 @@ public:
 
     void setChild(Node::Ptr node) { child = node; }
     bool hasChild() const { return child != nullptr; }
-    
+
 protected:
     Node::Ptr child = nullptr;
 };
@@ -188,7 +188,7 @@ public:
     Leaf() {}
     virtual ~Leaf() {}
     Leaf(Blackboard::Ptr blackboard) : blackboard(blackboard) {}
-    
+
     virtual Status update() = 0;
 
 protected:
@@ -202,11 +202,11 @@ public:
         blackboard = std::make_shared<Blackboard>();
     }
     BehaviorTree(const Node::Ptr &rootNode) : BehaviorTree() { root = rootNode; }
-    
+
     Status update() { return root->tick(); }
-    
+
     void setRoot(const Node::Ptr &node) { root = node; }
-    
+
 private:
     Node::Ptr root = nullptr;
 };
