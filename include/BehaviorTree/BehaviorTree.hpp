@@ -41,6 +41,13 @@
 #  include <string>
 #  include <unordered_map>
 #  include <cassert>
+#  include <functional>
+
+// FIXME: stocker les noeuds dans un containeur et utiliser que des raw pointeurs
+// FIXME: ajouter parent ?
+// generer le XML
+// loader le XML
+// faire mon groot
 
 namespace bt {
 
@@ -49,11 +56,16 @@ namespace bt {
 // ****************************************************************************
 enum class Status
 {
-    INVALID,
-    SUCCESS,
-    FAILURE,
-    RUNNING,
+    RUNNING = 1,
+    SUCCESS = 2,
+    FAILURE = 3,
 };
+
+inline std::string const& to_string(Status status)
+{
+  static std::string const names[3] = {"RUNNING", "SUCCESS", "FAILURE"};
+  return names[int(status) - 1];
+}
 
 // ****************************************************************************
 //! \brief
@@ -62,10 +74,10 @@ class Blackboard
 {
 public:
 
-    template<class T> using Entry = std::map<std::string, T>;
+    template<class T> using Entry = std::unordered_map<std::string, T>;
     using Ptr = std::shared_ptr<Blackboard>;
 
-    ~BlackBoard() { erase(); }
+    ~Blackboard() { erase(); }
 
     template<class T> void set(std::string const& key, T const& val)
     {
@@ -92,7 +104,7 @@ private:
         if (it == std::end(m_maps<T>))
         {
             // Hold list of created heterogeneous maps for their destruction
-            m_erase_functions.emplace_back([](BlackBoard& blackboard)
+            m_erase_functions.emplace_back([](Blackboard& blackboard)
             {
                 m_maps<T>.erase(&blackboard);
             });
@@ -114,13 +126,13 @@ private:
 private:
 
     template<class T>
-    static std::unordered_map<const BlackBoard*, Entry<T>> m_maps;
+    static std::unordered_map<const Blackboard*, Entry<T>> m_maps;
 
-    std::vector<std::function<void(BlackBoard&)>> m_erase_functions;
+    std::vector<std::function<void(Blackboard&)>> m_erase_functions;
 };
 
 template<class T>
-std::unordered_map<const BlackBoard*, BlackBoard::Entry<T>> BlackBoard::m_maps;
+std::unordered_map<const Blackboard*, Blackboard::Entry<T>> Blackboard::m_maps;
 
 // ****************************************************************************
 //! \brief
@@ -130,6 +142,12 @@ class Node
 public:
 
     using Ptr = std::shared_ptr<Node>;
+
+    template<typename T, typename... Args>
+    static std::unique_ptr<T> create(Args&&... args)
+    {
+        return std::make_unique<T>(std::forward<Args>(args)...);
+    }
 
     virtual ~Node() = default;
 
@@ -143,24 +161,20 @@ public:
         return m_blackboard;
     }
 
-    virtual Status update() = 0;
-    virtual void initialize() {};
-    virtual void terminate(Status /*status*/)
-    {}
-
     Status tick()
     {
         if (m_status != Status::RUNNING)
         {
-            initialize();
+            /*m_status =*/ onStart();
         }
-
-        m_status = update();
-        if (m_status != Status::RUNNING)
+        //else /*if (m_status == Status::RUNNING) ? */
         {
-            terminate(m_status);
+            m_status = onRunning();
+            if (m_status != Status::RUNNING)
+            {
+                onHalted(m_status);
+            }
         }
-
         return m_status;
     }
 
@@ -171,13 +185,77 @@ public:
 
     inline void reset()
     {
-        m_status = Status::INVALID;
+        m_status = Status(0);
     }
+
+private:
+
+    //! \brief Method called once, when transitioning from the state RUNNING.
+    virtual /*Status*/ void onStart() { } //return Status::RUNNING; }
+
+    //! \brief method invoked by the method tick() when the action is already in
+    //! the RUNNING state.
+    virtual Status onRunning() = 0;
+
+    //! \brief when the method tick() is called and the action is no longer
+    //! RUNNING, this method is invoked.  This is a convenient place for a
+    //! cleanup, if needed.
+    virtual void onHalted(Status /*status*/) {}
 
 protected:
 
-    Status m_status = Status::INVALID;
+    Status m_status = Status(0);
     Blackboard::Ptr m_blackboard = nullptr;
+};
+
+// ****************************************************************************
+//! \brief
+// ****************************************************************************
+class BehaviorTree : public Node
+{
+public:
+
+    BehaviorTree()
+    {
+        m_blackboard = std::make_unique<Blackboard>();
+    }
+
+    template <class T, typename... Args>
+    BehaviorTree(Args&&... args)
+        : BehaviorTree()
+    {
+        m_root = Node::create<T>(std::forward<Args>(args)...);
+    }
+
+    Status tick()
+    {
+        m_status = m_root->tick();
+        return m_status;
+    }
+
+    template <class T, typename... Args>
+    inline T& setRoot(Args&&... args)
+    {
+        m_root = Node::create<T>(std::forward<Args>(args)...);
+        return *reinterpret_cast<T*>(m_root.get());
+    }
+
+    inline Node& root()
+    {
+        return *m_root;
+    }
+
+private:
+
+    virtual Status onRunning() override
+    {
+        m_status = m_root->tick();
+        return m_status;
+    }
+
+private:
+
+    Node::Ptr m_root = nullptr;
 };
 
 // ****************************************************************************
@@ -189,10 +267,12 @@ public:
 
     virtual ~Composite() = default;
 
-    void addChild(Node::Ptr child)
+    template <class T, typename... Args>
+    inline T& addChild(Args&&... args)
     {
-        m_children.push_back(child);
+        m_children.emplace_back(Node::create<T>(std::forward<Args>(args)...));
         m_iterator = m_children.begin();
+        return *reinterpret_cast<T*>(m_children.back().get());
     }
 
     inline bool hasChildren() const
@@ -215,9 +295,11 @@ public:
 
     virtual ~Decorator() = default;
 
-    inline void setChild(Node::Ptr node)
+    template <class T, typename... Args>
+    inline T& setChild(Args&&... args)
     {
-        m_child = node;
+        m_child = Node::create<T>(std::forward<Args>(args)...);
+        return *reinterpret_cast<T*>(m_child.get());
     }
 
     inline bool hasChild() const
@@ -245,151 +327,9 @@ public:
 
     virtual ~Leaf() = default;
 
-    virtual Status update() = 0;
-
 protected:
 
     Blackboard::Ptr m_blackboard;
-};
-
-// ****************************************************************************
-//! \brief
-// ****************************************************************************
-class BehaviorTree : public Node
-{
-public:
-
-    BehaviorTree()
-    {
-        m_blackboard = std::make_shared<Blackboard>();
-    }
-
-    BehaviorTree(const Node::Ptr& rootNode)
-        : BehaviorTree()
-    {
-        m_root = rootNode;
-    }
-
-    virtual Status update() override
-    {
-        return m_root->tick();
-    }
-
-    inline void setRoot(const Node::Ptr& node)
-    {
-        m_root = node;
-    }
-
-private:
-
-    Node::Ptr m_root = nullptr;
-};
-
-// ****************************************************************************
-template <class Parent>
-class DecoratorBuilder;
-
-// ****************************************************************************
-//! \brief
-// ****************************************************************************
-template <class Parent>
-class CompositeBuilder
-{
-public:
-
-    CompositeBuilder(Parent* parent, Composite* node)
-        : m_parent(parent), m_node(node)
-    {}
-
-    template <class NodeType, typename... Args>
-    CompositeBuilder<Parent> leaf(Args&&... args)
-    {
-        auto child = std::make_shared<NodeType>((args)...);
-        child->setBlackboard(m_node->getBlackboard());
-        m_node->addChild(child);
-        return *this;
-    }
-
-    template <class CompositeType, typename... Args>
-    CompositeBuilder<CompositeBuilder<Parent>> composite(Args&&... args)
-    {
-        auto child = std::make_shared<CompositeType>((args)...);
-        child->setBlackboard(m_node->getBlackboard());
-        m_node->addChild(child);
-        return CompositeBuilder<CompositeBuilder<Parent>>(
-            this, reinterpret_cast<CompositeType*>(child.get()));
-    }
-
-    template <class DecoratorType, typename... Args>
-    DecoratorBuilder<CompositeBuilder<Parent>> decorator(Args&&... args)
-    {
-        auto child = std::make_shared<DecoratorType>((args)...);
-        child->setBlackboard(m_node->getBlackboard());
-        m_node->addChild(child);
-        return DecoratorBuilder<CompositeBuilder<Parent>>(
-            this, reinterpret_cast<DecoratorType*>(child.get()));
-    }
-
-    Parent& end()
-    {
-        return *m_parent;
-    }
-
-private:
-
-    Parent* m_parent;
-    Composite* m_node;
-};
-
-// ****************************************************************************
-//! \brief
-// ****************************************************************************
-template <class Parent>
-class DecoratorBuilder
-{
-public:
-    DecoratorBuilder(Parent* parent, Decorator* node)
-        : m_parent(parent), m_node(node)
-    {}
-
-    template <class NodeType, typename... Args>
-    DecoratorBuilder<Parent> leaf(Args&&... args)
-    {
-        auto child = std::make_shared<NodeType>((args)...);
-        child->setBlackboard(m_node->getBlackboard());
-        m_node->setChild(child);
-        return *this;
-    }
-
-    template <class CompositeType, typename... Args>
-    CompositeBuilder<DecoratorBuilder<Parent>> composite(Args&&... args)
-    {
-        auto child = std::make_shared<CompositeType>((args)...);
-        child->setBlackboard(m_node->getBlackboard());
-        m_node->setChild(child);
-        return CompositeBuilder<DecoratorBuilder<Parent>>(
-            this, reinterpret_cast<CompositeType*>(child.get()));
-    }
-
-    template <class DecoratorType, typename... Args>
-    DecoratorBuilder<DecoratorBuilder<Parent>> decorator(Args&&... args)
-    {
-        auto child = std::make_shared<DecoratorType>((args)...);
-        child->setBlackboard(m_node->getBlackboard());
-        m_node->setChild(child);
-        return DecoratorBuilder<DecoratorBuilder<Parent>>(
-            this, reinterpret_cast<DecoratorType*>(child.get()));
-    }
-
-    Parent& end()
-    {
-        return *m_parent;
-    }
-
-private:
-
-    Parent* m_parent;
-    Decorator* m_node;
 };
 
 // ****************************************************************************
@@ -402,12 +342,13 @@ class Selector : public Composite
 {
 public:
 
-    virtual void initialize() override
+    virtual /*Status*/ void onStart() override
     {
         m_iterator = m_children.begin();
+        //return Status::RUNNING;
     }
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
         assert(hasChildren() && "Composite has no children");
 
@@ -437,12 +378,13 @@ class Sequence : public Composite
 {
 public:
 
-    virtual void initialize() override
+    virtual /*Status*/ void onStart() override
     {
         m_iterator = m_children.begin();
+        //return Status::RUNNING;
     }
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
         assert(hasChildren() && "Composite has no children");
 
@@ -473,7 +415,7 @@ class StatefulSelector : public Composite
 {
 public:
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
         assert(hasChildren() && "Composite has no children");
 
@@ -505,7 +447,7 @@ class StatefulSequence : public Composite
 {
 public:
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
         assert(hasChildren() && "Composite has no children");
 
@@ -544,7 +486,7 @@ public:
           m_minFail(minFail)
     {}
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
         assert(hasChildren() && "Composite has no children");
 
@@ -610,6 +552,32 @@ private:
 };
 
 // ****************************************************************************
+//! \brief Simple leaf that always returns SUCCESS.
+// ****************************************************************************
+class AlwaysSuccess : public Leaf
+{
+public:
+
+    virtual Status onRunning() override
+    {
+        return Status::SUCCESS;
+    }
+};
+
+// ****************************************************************************
+//! \brief Simple leaf that always returns FAILURE.
+// ****************************************************************************
+class AlwaysFailure : public Leaf
+{
+public:
+
+    virtual Status onRunning() override
+    {
+        return Status::FAILURE;
+    }
+};
+
+// ****************************************************************************
 //! \brief The Succeeder decorator returns success, regardless of what happens
 //! to the child.
 // ****************************************************************************
@@ -617,10 +585,10 @@ class Succeeder : public Decorator
 {
 public:
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
-        m_child->tick();
-        return Status::SUCCESS;
+        m_status = m_child->tick();
+        return isTerminated() ? Status::SUCCESS : m_status;
     }
 };
 
@@ -632,10 +600,10 @@ class Failer : public Decorator
 {
 public:
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
-        m_child->tick();
-        return Status::FAILURE;
+        m_status = m_child->tick();
+        return isTerminated() ? Status::FAILURE : m_status;
     }
 };
 
@@ -648,7 +616,7 @@ class Inverter : public Decorator
 {
 public:
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
         auto s = m_child->tick();
         if (s == Status::SUCCESS)
@@ -676,12 +644,13 @@ public:
         : m_limit(limit)
     {}
 
-    virtual void initialize() override
+    virtual /*Status*/ void onStart() override
     {
         m_counter = 0;
+        //return Status::SUCCESS;
     }
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
         m_child->tick();
 
@@ -708,7 +677,7 @@ class UntilSuccess : public Decorator
 {
 public:
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
         while (true)
         {
@@ -729,7 +698,7 @@ class UntilFailure : public Decorator
 {
 public:
 
-    virtual Status update() override
+    virtual Status onRunning() override
     {
         while (true)
         {
@@ -740,57 +709,6 @@ public:
             }
         }
     }
-};
-
-// ****************************************************************************
-//! \brief
-// ****************************************************************************
-class Builder
-{
-public:
-
-    Builder()
-    {
-        m_tree = std::make_shared<BehaviorTree>();
-    }
-
-    template <class NodeType, typename... Args>
-    Builder leaf(Args&&... args)
-    {
-        m_root = std::make_shared<NodeType>((args)...);
-        m_root->setBlackboard(m_tree->getBlackboard());
-        return *this;
-    }
-
-    template <class CompositeType, typename... Args>
-    CompositeBuilder<Builder> composite(Args&&... args)
-    {
-        m_root = std::make_shared<CompositeType>((args)...);
-        m_root->setBlackboard(m_tree->getBlackboard());
-        return CompositeBuilder<Builder>(
-            this, reinterpret_cast<CompositeType*>(m_root.get()));
-    }
-
-    template <class DecoratorType, typename... Args>
-    DecoratorBuilder<Builder> decorator(Args&&... args)
-    {
-        m_root = std::make_shared<DecoratorType>((args)...);
-        m_root->setBlackboard(m_tree->getBlackboard());
-        return DecoratorBuilder<Builder>(
-            this, reinterpret_cast<DecoratorType*>(m_root.get()));
-    }
-
-    Node::Ptr build()
-    {
-        assert((m_root != nullptr) && "The Behavior Tree is empty!");
-        m_tree->setRoot(m_root);
-        return m_tree;
-    }
-
-private:
-
-    Node::Ptr m_root;
-    std::shared_ptr<BehaviorTree> m_tree;
 };
 
 } // namespace bt
