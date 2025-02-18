@@ -1,0 +1,25 @@
+behavior_tree:
+  type: selector
+  children:
+    # Branch 1: Low battery management
+    - type: sequence
+      children:
+        - type: action
+          name: check_battery
+        - type: action
+          name: recharge
+
+    # Branch 2: Normal surveillance
+    - type: sequence
+      children:
+        # Sub-branch: Patrol and detection
+        - type: parallel_sequence
+          success_threshold: 1
+          failure_threshold: 1
+          children:
+            - type: action
+              name: patrol
+            - type: action
+              name: detect_threat
+        - type: action
+          name: send_alert

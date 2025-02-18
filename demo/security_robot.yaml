@@ -1,0 +1,10 @@
+root:
+  fallback:
+    - sequence:
+        - check_battery
+        - fallback:
+            - sequence:
+                - detect_threat
+                - send_alert
+            - patrol
+    - recharge 

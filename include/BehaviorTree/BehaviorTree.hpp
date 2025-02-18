@@ -42,17 +42,14 @@
 #  include <unordered_map>
 #  include <cassert>
 #  include <functional>
-
-// FIXME: stocker les noeuds dans un containeur et utiliser que des raw pointeurs
-// FIXME: ajouter parent ?
-// generer le XML
-// loader le XML
-// faire mon groot
+#  include <stdexcept>
+#  include <optional>
+#  include <any>
 
 namespace bt {
 
 // ****************************************************************************
-//! \brief
+//! \brief Enum representing the status of a node in the behavior tree.
 // ****************************************************************************
 enum class Status
 {
@@ -61,6 +58,11 @@ enum class Status
     FAILURE = 3,
 };
 
+// ****************************************************************************
+//! \brief Convert a node status to a string.
+//! \param[in] status The status to convert.
+//! \return The string representation of the status.
+// ****************************************************************************
 inline std::string const& to_string(Status status)
 {
   static std::string const names[3] = {"RUNNING", "SUCCESS", "FAILURE"};
@@ -68,7 +70,8 @@ inline std::string const& to_string(Status status)
 }
 
 // ****************************************************************************
-//! \brief
+//! \brief Blackboard class allowing to store and share data between nodes of
+//! different types using key-value pairs.
 // ****************************************************************************
 class Blackboard
 {
@@ -79,16 +82,100 @@ public:
 
     ~Blackboard() { erase(); }
 
-    template<class T> void set(std::string const& key, T const& val)
+    // ------------------------------------------------------------------------
+    //! \brief Set a value in the blackboard
+    //! \param[in] key The key to store the value under
+    //! \param[in] val The value to store
+    //! \throw std::invalid_argument if key is empty
+    // ------------------------------------------------------------------------
+    template<class T>
+    void set(std::string const& key, T const& val)
     {
+        if (key.empty())
+            throw std::invalid_argument("Blackboard key cannot be empty");
         entries<T>()[key] = val;
     }
 
-    template<class T> T get(std::string const& key) const
-    {
-        return entries<T>().at(key);
+    // ------------------------------------------------------------------------
+    //! \brief Get a value from the blackboard
+    //! \param[in] key The key to look up
+    //! \return The value if found, empty pair if not found
+    // ------------------------------------------------------------------------
+    template<typename T>
+    std::pair<T, bool> get(std::string const& key) const {
+        auto it = storage.find(key);
+        if (it != storage.end()) {
+            try {
+                return {std::any_cast<T>(it->second), true};
+            } catch (const std::bad_any_cast&) {
+                return {T{}, false};
+            }
+        }
+        return {T{}, false};
     }
 
+    // ------------------------------------------------------------------------
+    //! \brief Get a value from the blackboard with a default value
+    //! \param[in] key The key to look up
+    //! \param[in] defaultValue The value to return if key not found
+    //! \return The value from the blackboard or the default value
+    // ------------------------------------------------------------------------
+    template<typename T>
+    T getOr(std::string const& key, const T& defaultValue) const {
+        auto [value, found] = get<T>(key);
+        return found ? value : defaultValue;
+    }
+
+    // ------------------------------------------------------------------------
+    //! \brief Check if a key exists for a specific type
+    //! \param[in] key The key to check
+    //! \return true if the key exists, false otherwise
+    // ------------------------------------------------------------------------
+    template<class T>
+    bool has(std::string const& key) const
+    {
+        auto it = m_maps<T>.find(this);
+        if (it == m_maps<T>.end())
+            return false;
+        return it->second.find(key) != it->second.end();
+    }
+
+    // ------------------------------------------------------------------------
+    //! \brief Remove a key-value pair from the blackboard
+    //! \param[in] key The key to remove
+    //! \return true if the key was removed, false if it didn't exist
+    // ------------------------------------------------------------------------
+    template<class T>
+    bool remove(std::string const& key)
+    {
+        auto it = m_maps<T>.find(this);
+        if (it == m_maps<T>.end())
+            return false;
+        return it->second.erase(key) > 0;
+    }
+
+    // ------------------------------------------------------------------------
+    //! \brief Get all keys for a specific type
+    //! \return Vector of keys stored for type T
+    // ------------------------------------------------------------------------
+    template<class T>
+    std::vector<std::string> getKeys() const
+    {
+        std::vector<std::string> keys;
+        auto it = m_maps<T>.find(this);
+        if (it != m_maps<T>.end()) {
+            keys.reserve(it->second.size());
+            for (const auto& pair : it->second) {
+                keys.push_back(pair.first);
+            }
+        }
+        return keys;
+    }
+
+    // ------------------------------------------------------------------------
+    //! \brief Get the entries for a specific type
+    //! \return The entries for the type
+    // ------------------------------------------------------------------------
     template<class T>
     inline Entry<T>& entries() const
     {
@@ -97,6 +184,10 @@ public:
 
 private:
 
+    // ------------------------------------------------------------------------
+    //! \brief Get the entries for a specific type
+    //! \return The entries for the type
+    // ------------------------------------------------------------------------
     template<class T>
     Entry<T>& entries()
     {
@@ -114,7 +205,9 @@ private:
         return it->second;
     }
 
-    // Destroy all created heterogeneous stacks
+    // ------------------------------------------------------------------------
+    //! \brief Destroy all created heterogeneous stacks
+    // ------------------------------------------------------------------------
     void erase()
     {
         for (auto&& erase_func : m_erase_functions)
@@ -125,17 +218,28 @@ private:
 
 private:
 
+    // ------------------------------------------------------------------------
+    //! \brief The map of heterogeneous stacks
+    // ------------------------------------------------------------------------
     template<class T>
     static std::unordered_map<const Blackboard*, Entry<T>> m_maps;
 
+    // ------------------------------------------------------------------------
+    //! \brief The vector of functions to erase the heterogeneous stacks
+    // ------------------------------------------------------------------------
     std::vector<std::function<void(Blackboard&)>> m_erase_functions;
+
+    // ------------------------------------------------------------------------
+    //! \brief The map of heterogeneous stacks
+    // ------------------------------------------------------------------------
+    std::unordered_map<std::string, std::any> storage;
 };
 
 template<class T>
 std::unordered_map<const Blackboard*, Blackboard::Entry<T>> Blackboard::m_maps;
 
 // ****************************************************************************
-//! \brief
+//! \brief Base class for all nodes in the behavior tree.
 // ****************************************************************************
 class Node
 {
@@ -143,24 +247,43 @@ public:
 
     using Ptr = std::shared_ptr<Node>;
 
+    // ------------------------------------------------------------------------
+    //! \brief Create a new node of type T
+    //! \param[in] args The arguments to pass to the constructor of T
+    //! \return A unique pointer to the new node
+    // ------------------------------------------------------------------------
     template<typename T, typename... Args>
     static std::unique_ptr<T> create(Args&&... args)
     {
         return std::make_unique<T>(std::forward<Args>(args)...);
     }
 
+    // ------------------------------------------------------------------------
+    //! \brief Destructor
+    // ------------------------------------------------------------------------
     virtual ~Node() = default;
 
+    // ------------------------------------------------------------------------
+    //! \brief Set the blackboard for the node
+    // ------------------------------------------------------------------------
     inline void setBlackboard(Blackboard::Ptr blackboard)
     {
         m_blackboard = blackboard;
     }
 
+    // ------------------------------------------------------------------------
+    //! \brief Get the blackboard for the node
+    //! \return The blackboard for the node
+    // ------------------------------------------------------------------------
     inline Blackboard::Ptr getBlackboard() const
     {
         return m_blackboard;
     }
 
+    // ------------------------------------------------------------------------
+    //! \brief Tick the node
+    //! \return The status of the node
+    // ------------------------------------------------------------------------
     Status tick()
     {
         if (m_status != Status::RUNNING)
@@ -178,34 +301,104 @@ public:
         return m_status;
     }
 
+    // ------------------------------------------------------------------------
+    //! \brief Check if the node is successful
+    //! \return True if the node is successful, false otherwise
+    // ------------------------------------------------------------------------
     inline bool isSuccess() const { return m_status == Status::SUCCESS; }
-    inline bool isFailure() const { return m_status == Status::FAILURE; }
-    inline bool isRunning() const { return m_status == Status::RUNNING; }
-    inline bool isTerminated() const { return isSuccess() || isFailure(); }
 
+    // ------------------------------------------------------------------------
+    //! \brief Check if the node is failed
+    //! \return True if the node is failed, false otherwise
+    // ------------------------------------------------------------------------
+    inline bool isFailure() const { return m_status == Status::FAILURE; }
+
+    // ------------------------------------------------------------------------
+    //! \brief Reset the node
+    // ------------------------------------------------------------------------
     inline void reset()
     {
         m_status = Status(0);
     }
 
+protected:
+
+    //! \brief The status of the node
+    Status m_status = Status(0);
+
+    //! \brief The blackboard for the node
+    Blackboard::Ptr m_blackboard = nullptr;
+
+    // Add this helper method
+    bool isTerminated() const
+    {
+        return (m_status == Status::SUCCESS) || (m_status == Status::FAILURE);
+    }
+
 private:
 
+    // ------------------------------------------------------------------------
     //! \brief Method called once, when transitioning from the state RUNNING.
+    // ------------------------------------------------------------------------
     virtual /*Status*/ void onStart() { } //return Status::RUNNING; }
 
-    //! \brief method invoked by the method tick() when the action is already in
+    // ------------------------------------------------------------------------
+    //! \brief Method invoked by the method tick() when the action is already in
     //! the RUNNING state.
+    // ------------------------------------------------------------------------
     virtual Status onRunning() = 0;
 
+    // ------------------------------------------------------------------------
     //! \brief when the method tick() is called and the action is no longer
     //! RUNNING, this method is invoked.  This is a convenient place for a
     //! cleanup, if needed.
+    // ------------------------------------------------------------------------
     virtual void onHalted(Status /*status*/) {}
+};
+
+// ****************************************************************************
+//! \brief Factory class for creating behavior tree nodes.
+//! This class allows registering custom node types that can be created by name.
+// ****************************************************************************
+class NodeFactory
+{
+public:
+    //! \brief Function type for creating nodes
+    using NodeCreator = std::function<std::unique_ptr<Node>()>;
+
+    virtual ~NodeFactory() = default;
+
+    //! \brief Register a node type with a creation function
+    //! \param[in] name Name used to identify this node type
+    //! \param[in] creator Function that creates instances of this node type
+    void registerNode(const std::string& name, NodeCreator creator)
+    {
+        m_creators[name] = std::move(creator);
+    }
+
+    //! \brief Create a node instance by name
+    //! \param[in] name The registered name of the node type to create
+    //! \return Unique pointer to the new node instance, or nullptr if name not found
+    std::unique_ptr<Node> createNode(const std::string& name) const
+    {
+        auto it = m_creators.find(name);
+        if (it != m_creators.end()) {
+            return it->second();
+        }
+        return nullptr;
+    }
+
+    //! \brief Check if a node type is registered
+    //! \param[in] name The name to check
+    //! \return True if the node type is registered
+    bool hasNode(const std::string& name) const
+    {
+        return m_creators.find(name) != m_creators.end();
+    }
 
 protected:
-
-    Status m_status = Status(0);
-    Blackboard::Ptr m_blackboard = nullptr;
+    //! \brief Map of node names to their creation functions
+    std::unordered_map<std::string, NodeCreator> m_creators;
 };
 
 // ****************************************************************************
@@ -215,16 +408,21 @@ class BehaviorTree : public Node
 {
 public:
 
-    BehaviorTree()
+    //! \brief Default constructor
+    BehaviorTree() = default;
+
+    //! \brief Set the root node of the behavior tree
+    //! \param[in] root Pointer to the root node
+    void setRoot(Node::Ptr root)
     {
-        m_blackboard = std::make_unique<Blackboard>();
+        m_root = std::move(root);
     }
 
-    template <class T, typename... Args>
-    BehaviorTree(Args&&... args)
-        : BehaviorTree()
+    //! \brief Get the root node of the behavior tree
+    //! \return Const reference to the root node pointer
+    Node::Ptr const& getRoot() const
     {
-        m_root = Node::create<T>(std::forward<Args>(args)...);
+        return m_root;
     }
 
     Status tick()
@@ -259,13 +457,22 @@ private:
 };
 
 // ****************************************************************************
-//! \brief
+//! \brief Base class for composite nodes that can have multiple children.
+//! Composite nodes are used to control the flow of the behavior tree.
 // ****************************************************************************
 class Composite : public Node
 {
 public:
 
     virtual ~Composite() = default;
+
+    //! \brief Add an existing node as a child
+    //! \param[in] child Pointer to the child node to add
+    void addChild(Node::Ptr child)
+    {
+        m_children.emplace_back(std::move(child));
+        m_iterator = m_children.begin();
+    }
 
     template <class T, typename... Args>
     inline T& addChild(Args&&... args)
@@ -280,6 +487,13 @@ public:
         return !m_children.empty();
     }
 
+    //! \brief Get the children nodes
+    //! \return Const reference to the vector of child nodes
+    std::vector<Node::Ptr> const& children() const
+    {
+        return m_children;
+    }
+
 protected:
 
     std::vector<Node::Ptr> m_children;
@@ -287,7 +501,8 @@ protected:
 };
 
 // ****************************************************************************
-//! \brief
+//! \brief Base class for decorator nodes that can have only one child.
+//! Decorator nodes are used to modify the behavior of their child node.
 // ****************************************************************************
 class Decorator : public Node
 {
@@ -307,13 +522,20 @@ public:
         return m_child != nullptr;
     }
 
+    /**
+     * @brief Get the child node
+     * @return The child node pointer
+     */
+    Node::Ptr getChild() const { return m_child; }
+
 protected:
 
     Node::Ptr m_child = nullptr;
 };
 
 // ****************************************************************************
-//! \brief
+//! \brief Base class for leaf nodes that have no children.
+//! Leaf nodes are the nodes that actually do the work.
 // ****************************************************************************
 class Leaf : public Node
 {
@@ -469,20 +691,34 @@ public:
 };
 
 // ****************************************************************************
-//! \brief
+//! \brief The ParallelSequence composite runs all children simultaneously.
+//! It can be configured with either success/failure policies or minimum counts.
+//! When using policies:
+//! - successOnAll=true requires all children to succeed
+//! - failOnAll=true requires all children to fail
+//! When using counts:
+//! - minSuccess defines minimum successful children needed
+//! - minFail defines minimum failed children needed
 // ****************************************************************************
 class ParallelSequence : public Composite
 {
 public:
 
-    ParallelSequence(bool successOnAll = true, bool failOnAll = true)
+    //! \brief Constructor with success/fail policy
+    //! \param[in] successOnAll If true, requires all children to succeed
+    //! \param[in] failOnAll If true, requires all children to fail
+    explicit ParallelSequence(bool successOnAll = true, bool failOnAll = true)
         : m_useSuccessFailPolicy(true),
           m_successOnAll(successOnAll),
           m_failOnAll(failOnAll)
     {}
 
-    ParallelSequence(int minSuccess, int minFail)
-        : m_minSuccess(minSuccess),
+    //! \brief Constructor with minimum success/fail counts
+    //! \param[in] minSuccess Minimum number of successful children required
+    //! \param[in] minFail Minimum number of failed children required
+    explicit ParallelSequence(size_t minSuccess, size_t minFail)
+        : m_useSuccessFailPolicy(false),
+          m_minSuccess(minSuccess),
           m_minFail(minFail)
     {}
 
@@ -490,8 +726,8 @@ public:
     {
         assert(hasChildren() && "Composite has no children");
 
-        int m_minimumSuccess = m_minSuccess;
-        int m_minimumFail = m_minFail;
+        size_t m_minimumSuccess = m_minSuccess;
+        size_t m_minimumFail = m_minFail;
 
         if (m_useSuccessFailPolicy)
         {
@@ -514,8 +750,8 @@ public:
             }
         }
 
-        int total_success = 0;
-        int total_fail = 0;
+        size_t total_success = 0;
+        size_t total_fail = 0;
 
         for (auto &child : m_children)
         {
@@ -547,8 +783,8 @@ private:
     bool m_useSuccessFailPolicy = false;
     bool m_successOnAll = true;
     bool m_failOnAll = true;
-    int m_minSuccess = 0;
-    int m_minFail = 0;
+    size_t m_minSuccess = 0;
+    size_t m_minFail = 0;
 };
 
 // ****************************************************************************
@@ -662,6 +898,12 @@ public:
 
         return Status::RUNNING;
     }
+
+    /**
+     * @brief Get the repeat limit
+     * @return The number of repetitions
+     */
+    int getLimit() const { return m_limit; }
 
 protected:
 

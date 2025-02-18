@@ -1,11 +1,12 @@
+# -*- mode: makefile -*-
 ##=====================================================================
-## https://github.com/Lecrapouille/BehaviorTree
-## BehaviorTree: Library for Behavior Tree
-## Copyright 2025 Quentin Quadrat <lecrapouille@gmail.com>
+## https://github.com/Lecrapouille/Highway
+## Highway: Open-source simulator for autonomous driving research.
+## Copyright 2021 -- 2023 Quentin Quadrat <lecrapouille@gmail.com>
 ##
-## This file is part of BehaviorTree.
+## This file is part of Highway.
 ##
-## BehaviorTree is free software: you can redistribute it and/or modify it
+## Highway is free software: you can redistribute it and/or modify it
 ## under the terms of the GNU General Public License as published by
 ## the Free Software Foundation, either version 3 of the License, or
 ## (at your option) any later version.
@@ -22,46 +23,33 @@
 ###################################################
 # Location of the project directory and Makefiles
 #
-P := .
+P := $(abspath ../..)
 M := $(P)/.makefile
 
 ###################################################
 # Project definition
 #
 include $(P)/Makefile.common
-TARGET_NAME := $(PROJECT_NAME)
-TARGET_DESCRIPTION := Library for Behavior Tree
+TARGET_NAME := $(DEMO_NAME)
+TARGET_DESCRIPTION := $(DEMO_DESCRIPTION)
 include $(M)/project/Makefile
 
 ###################################################
-# External dependencies
+# Inform Makefile where to find header files
 #
-PKG_LIBS += yaml-cpp tinyxml2
+INCLUDES += $(P) $(P)/src $(P)/include
 
 ###################################################
-# Standalone application
+# Make the list of compiled files for the library
 #
-LIB_FILES := src/TreeBuilder.cpp src/TreeExporter.cpp
-INCLUDES += $(P) $(P)/src $(P)/include
+SRC_FILES += $(DEMO_FILES)
+
+###################################################
+# Set Libraries.
+#
+THIRDPART_LIBS += $(call internal-lib,BehaviorTree)
 
 ###################################################
 # Generic Makefile rules
 #
 include $(M)/rules/Makefile
-
-###################################################
-# Extra rules
-#
-all:: demos
-
-###################################################
-# Compile demos
-#
-DEMOS = $(sort $(dir $(wildcard ./demos/*/.)))
-.PHONY: demos
-demos:
-	@$(call print-from,"Compiling demos",$(PROJECT_NAME),$(DEMOS))
-	@for i in $(DEMOS);            \
-	do                             \
-		$(MAKE) -C $$i all;        \
-	done;
