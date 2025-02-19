@@ -4,6 +4,13 @@
 #include <fstream>  // Pour std::ofstream
 #include <sstream>  // Pour std::stringstream
 
+namespace bt {
+
+// ****************************************************************************
+//! \brief Test fixture for TreeBuilder class
+//! \details This class provides the test environment for the TreeBuilder functionality,
+//! including YAML and XML parsing capabilities.
+// ****************************************************************************
 class TreeBuilderTest : public ::testing::Test
 {
 protected:
@@ -12,6 +19,11 @@ protected:
     }
 };
 
+// ****************************************************************************
+//! \brief Test loading a simple behavior tree from YAML format
+//! \details Tests the creation of a basic behavior tree with a sequence node
+//! containing an action and a condition node.
+// ****************************************************************************
 TEST_F(TreeBuilderTest, LoadSimpleYAMLTree)
 {
     std::string yaml_content = R"(
@@ -37,6 +49,11 @@ TEST_F(TreeBuilderTest, LoadSimpleYAMLTree)
     std::remove("test.yaml");
 }
 
+// ****************************************************************************
+//! \brief Test loading a behavior tree from BehaviorTree.CPP XML format
+//! \details Verifies the ability to parse and create a tree from the standard
+//! BehaviorTree.CPP XML format (version 4).
+// ****************************************************************************
 TEST_F(TreeBuilderTest, LoadXMLFromBehaviorTreeCPP)
 {
     std::string xml_content = R"(
@@ -62,9 +79,15 @@ TEST_F(TreeBuilderTest, LoadXMLFromBehaviorTreeCPP)
     std::remove("test.xml");
 }
 
+// ****************************************************************************
+//! \brief Test loading a complex behavior tree from YAML
+//! \details Tests the creation of a more complex tree structure with nested
+//! sequence and selector nodes. Verifies proper node hierarchy
+//! and child relationships.
+// ****************************************************************************
 TEST(TreeBuilder, LoadYAML)
 {
-    // Créer un fichier YAML temporaire pour le test
+    // Create a temporary YAML file for the test
     std::ofstream temp("test.yaml");
     temp << R"(
 behavior_tree:
@@ -77,12 +100,12 @@ behavior_tree:
 )";
     temp.close();
 
-    // Charger et vérifier l'arbre
+    // Load and verify the tree
     auto tree = bt::TreeBuilder::fromYAML("test.yaml");
     ASSERT_TRUE(tree != nullptr);
     ASSERT_TRUE(tree->getRoot() != nullptr);
 
-    // Vérifier que la structure est correcte
+    // Verify that the structure is correct
     auto root = dynamic_cast<bt::Sequence*>(tree->getRoot().get());
     ASSERT_TRUE(root != nullptr);
     ASSERT_EQ(root->children().size(), 2);
@@ -95,8 +118,8 @@ behavior_tree:
     ASSERT_TRUE(secondChild != nullptr);
     ASSERT_EQ(secondChild->children().size(), 0);
 
-    // Nettoyer
+    // Clean up
     std::remove("test.yaml");
 }
 
-// Ajouter d'autres tests similaires pour XML...
+} // namespace bt

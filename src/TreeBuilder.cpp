@@ -32,9 +32,11 @@ namespace bt {
 
 std::unique_ptr<BehaviorTree> TreeBuilder::fromYAML(std::string const& filename)
 {
-    try {
+    try
+    {
         YAML::Node root = YAML::LoadFile(filename);
-        if (!root["behavior_tree"]) {
+        if (!root["behavior_tree"])
+        {
             throw std::runtime_error("Missing 'behavior_tree' node in YAML");
         }
 
@@ -42,38 +44,107 @@ std::unique_ptr<BehaviorTree> TreeBuilder::fromYAML(std::string const& filename)
         tree->setRoot(parseYAMLNode(root["behavior_tree"]));
         return tree;
     }
-    catch (const YAML::Exception& e) {
+    catch (const YAML::Exception& e)
+    {
         throw std::runtime_error("YAML parsing error: " + std::string(e.what()));
     }
 }
 
 Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
 {
-    if (!node["type"]) {
+    if (!node.IsMap())
+    {
+        throw std::runtime_error("Invalid node format: must be a map");
+    }
+
+    if (!node["type"])
+    {
         throw std::runtime_error("Node missing 'type' field");
     }
 
     std::string type = node["type"].as<std::string>();
 
-    if (type == "sequence") {
-        auto seq = std::make_shared<Sequence>();
-        if (node["children"]) {
-            for (auto const& child : node["children"]) {
+    // Composite nodes
+    if (type == "sequence")
+    {
+        auto seq = Node::create<Sequence>();
+        if (node["children"] && node["children"].IsSequence())
+        {
+            for (auto const& child : node["children"])
+            {
                 seq->addChild(parseYAMLNode(child));
             }
         }
         return seq;
     }
-    else if (type == "selector") {
-        auto sel = std::make_shared<Selector>();
-        if (node["children"]) {
-            for (auto const& child : node["children"]) {
+    else if (type == "selector")
+    {
+        auto sel = Node::create<Selector>();
+        if (node["children"] && node["children"].IsSequence())
+        {
+            for (auto const& child : node["children"])
+            {
                 sel->addChild(parseYAMLNode(child));
             }
         }
         return sel;
     }
-    // Add other node types here...
+    else if (type == "parallel_sequence")
+    {
+        size_t success_threshold = node["success_threshold"] ? 
+            node["success_threshold"].as<size_t>() : size_t(1);
+        size_t failure_threshold = node["failure_threshold"] ? 
+            node["failure_threshold"].as<size_t>() : size_t(1);
+            
+        auto par = Node::create<ParallelSequence>(success_threshold, failure_threshold);
+        
+        if (node["children"] && node["children"].IsSequence())
+        {
+            for (const auto& child : node["children"])
+            {
+                par->addChild(parseYAMLNode(child));
+            }
+        }
+        return par;
+    }
+    // Decorator nodes
+    else if (type == "inverter")
+    {
+        auto inv = Node::create<Inverter>();
+        if (!node["child"])
+        {
+            throw std::runtime_error("Decorator node missing 'child' field");
+        }
+        inv->setChild(parseYAMLNode(node["child"]));
+        return inv;
+    }
+    else if (type == "repeater")
+    {
+        size_t num_repeats = node["num_repeats"] ? 
+            node["num_repeats"].as<size_t>() : size_t(0);
+        auto rep = Node::create<Repeater>(num_repeats);
+        if (!node["child"])
+        {
+            throw std::runtime_error("Decorator node missing 'child' field");
+        }
+        rep->setChild(parseYAMLNode(node["child"]));
+        return rep;
+    }
+    // Action nodes
+    else if (type == "action")
+    {
+        if (!node["name"])
+        {
+            throw std::runtime_error("Action node missing 'name' field");
+        }
+        std::string action_name = node["name"].as<std::string>();
+        auto action = m_factory->createNode(action_name);
+        if (!action)
+        {
+            throw std::runtime_error("Failed to create action node: " + action_name);
+        }
+        return action;
+    }
 
     throw std::runtime_error("Unknown node type: " + type);
 }
@@ -81,12 +152,14 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
 std::unique_ptr<BehaviorTree> TreeBuilder::fromXML(std::string const& filename)
 {
     tinyxml2::XMLDocument doc;
-    if (doc.LoadFile(filename.c_str()) != tinyxml2::XML_SUCCESS) {
+    if (doc.LoadFile(filename.c_str()) != tinyxml2::XML_SUCCESS)
+    {
         throw std::runtime_error("Failed to load XML file: " + filename);
     }
 
     auto root = doc.FirstChildElement("behavior_tree");
-    if (!root) {
+    if (!root)
+    {
         throw std::runtime_error("Missing root 'behavior_tree' element");
     }
 
@@ -97,20 +170,23 @@ std::unique_ptr<BehaviorTree> TreeBuilder::fromXML(std::string const& filename)
 
 Node::Ptr TreeBuilder::parseXMLNode(tinyxml2::XMLElement const* element)
 {
-    if (!element) {
+    if (!element)
+    {
         throw std::runtime_error("Invalid XML element");
     }
 
     std::string type = element->Name();
 
-    if (type == "Sequence") {
+    if (type == "Sequence")
+    {
         auto seq = std::make_shared<Sequence>();
         for (auto child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
             seq->addChild(parseXMLNode(child));
         }
         return seq;
     }
-    else if (type == "Selector") {
+    else if (type == "Selector")
+    {
         auto sel = std::make_shared<Selector>();
         for (auto child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
             sel->addChild(parseXMLNode(child));

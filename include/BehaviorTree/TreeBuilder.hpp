@@ -43,13 +43,18 @@ namespace bt {
 class TreeBuilder
 {
 public:
+    //! \brief Constructor with node factory
+    //! \param[in] factory Factory used to create action nodes
+    explicit TreeBuilder(std::shared_ptr<NodeFactory> factory)
+        : m_factory(std::move(factory))
+    {}
 
     // ------------------------------------------------------------------------
     //! \brief Create a behavior tree from YAML file.
     //! \param[in] filename Path to the YAML file.
     //! \return Unique pointer to the created behavior tree.
     // ------------------------------------------------------------------------
-    static std::unique_ptr<BehaviorTree> fromYAML(std::string const& filename);
+    std::unique_ptr<BehaviorTree> fromYAML(std::string const& filename);
 
     // ------------------------------------------------------------------------
     //! \brief Create a behavior tree from XML file compatible with
@@ -57,30 +62,34 @@ public:
     //! \param[in] filename Path to the XML file.
     //! \return Unique pointer to the created behavior tree.
     // ------------------------------------------------------------------------
-    static std::unique_ptr<BehaviorTree> fromXML(std::string const& filename);
+    std::unique_ptr<BehaviorTree> fromXML(std::string const& filename);
 
-    //! \brief Set the factory used to create nodes
-    //! \param[in] factory Pointer to the node factory
-    static void setFactory(NodeFactory* factory)
+    // ------------------------------------------------------------------------
+    //! \brief Set the factory used to create nodes.
+    //! \param[in] factory Pointer to the node factory.
+    // ------------------------------------------------------------------------
+    static void setFactory(NodeFactory& factory)
     {
-        s_factory = factory;
+        getFactory() = factory;
     }
 
-    //! \brief Get the current node factory
-    //! \return Pointer to the current node factory
-    static NodeFactory* getFactory()
+    // ------------------------------------------------------------------------
+    //! \brief Get the current node factory.
+    //! \return Pointer to the current node factory.
+    // ------------------------------------------------------------------------
+    static NodeFactory& getFactory()
     {
+        static NodeFactory s_factory;
         return s_factory;
     }
 
 private:
-    static Node::Ptr parseYAMLNode(YAML::Node const& node);
-    static Node::Ptr parseXMLNode(tinyxml2::XMLElement const* element);
-    static NodeFactory* s_factory;
-};
+    Node::Ptr parseYAMLNode(YAML::Node const& node);
+    Node::Ptr parseXMLNode(tinyxml2::XMLElement const* element);
 
-// Initialize the static member
-NodeFactory* TreeBuilder::s_factory = nullptr;
+private:
+    std::shared_ptr<NodeFactory> m_factory;
+};
 
 } // namespace bt
 

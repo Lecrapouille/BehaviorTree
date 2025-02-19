@@ -80,29 +80,19 @@ public:
     template<class T> using Entry = std::unordered_map<std::string, T>;
     using Ptr = std::shared_ptr<Blackboard>;
 
-    ~Blackboard() { erase(); }
+    ~Blackboard() = default;
 
-    // ------------------------------------------------------------------------
-    //! \brief Set a value in the blackboard
-    //! \param[in] key The key to store the value under
-    //! \param[in] val The value to store
-    //! \throw std::invalid_argument if key is empty
-    // ------------------------------------------------------------------------
-    template<class T>
+    template<typename T>
     void set(std::string const& key, T const& val)
     {
         if (key.empty())
             throw std::invalid_argument("Blackboard key cannot be empty");
-        entries<T>()[key] = val;
+        storage[key] = val;
     }
 
-    // ------------------------------------------------------------------------
-    //! \brief Get a value from the blackboard
-    //! \param[in] key The key to look up
-    //! \return The value if found, empty pair if not found
-    // ------------------------------------------------------------------------
     template<typename T>
-    std::pair<T, bool> get(std::string const& key) const {
+    std::pair<T, bool> get(std::string const& key) const 
+    {
         auto it = storage.find(key);
         if (it != storage.end()) {
             try {
@@ -114,14 +104,9 @@ public:
         return {T{}, false};
     }
 
-    // ------------------------------------------------------------------------
-    //! \brief Get a value from the blackboard with a default value
-    //! \param[in] key The key to look up
-    //! \param[in] defaultValue The value to return if key not found
-    //! \return The value from the blackboard or the default value
-    // ------------------------------------------------------------------------
     template<typename T>
-    T getOr(std::string const& key, const T& defaultValue) const {
+    T getOr(std::string const& key, const T& defaultValue) const 
+    {
         auto [value, found] = get<T>(key);
         return found ? value : defaultValue;
     }
@@ -180,40 +165,6 @@ public:
     inline Entry<T>& entries() const
     {
         return m_maps<T>.at(this);
-    }
-
-private:
-
-    // ------------------------------------------------------------------------
-    //! \brief Get the entries for a specific type
-    //! \return The entries for the type
-    // ------------------------------------------------------------------------
-    template<class T>
-    Entry<T>& entries()
-    {
-        auto it = m_maps<T>.find(this);
-        if (it == std::end(m_maps<T>))
-        {
-            // Hold list of created heterogeneous maps for their destruction
-            m_erase_functions.emplace_back([](Blackboard& blackboard)
-            {
-                m_maps<T>.erase(&blackboard);
-            });
-
-            return m_maps<T>[this];
-        }
-        return it->second;
-    }
-
-    // ------------------------------------------------------------------------
-    //! \brief Destroy all created heterogeneous stacks
-    // ------------------------------------------------------------------------
-    void erase()
-    {
-        for (auto&& erase_func : m_erase_functions)
-        {
-            erase_func(*this);
-        }
     }
 
 private:
@@ -314,25 +265,20 @@ public:
     inline bool isFailure() const { return m_status == Status::FAILURE; }
 
     // ------------------------------------------------------------------------
+    //! \brief Check if the node is terminated
+    //! \return True if the node is terminated, false otherwise
+    // ------------------------------------------------------------------------
+    inline bool isTerminated() const
+    {
+        return (m_status == Status::SUCCESS) || (m_status == Status::FAILURE);
+    }
+
+    // ------------------------------------------------------------------------
     //! \brief Reset the node
     // ------------------------------------------------------------------------
     inline void reset()
     {
         m_status = Status(0);
-    }
-
-protected:
-
-    //! \brief The status of the node
-    Status m_status = Status(0);
-
-    //! \brief The blackboard for the node
-    Blackboard::Ptr m_blackboard = nullptr;
-
-    // Add this helper method
-    bool isTerminated() const
-    {
-        return (m_status == Status::SUCCESS) || (m_status == Status::FAILURE);
     }
 
 private:
@@ -354,6 +300,14 @@ private:
     //! cleanup, if needed.
     // ------------------------------------------------------------------------
     virtual void onHalted(Status /*status*/) {}
+
+protected:
+
+    //! \brief The status of the node
+    Status m_status = Status(0);
+
+    //! \brief The blackboard for the node
+    Blackboard::Ptr m_blackboard = nullptr;
 };
 
 // ****************************************************************************
@@ -509,6 +463,11 @@ class Decorator : public Node
 public:
 
     virtual ~Decorator() = default;
+
+    void setChild(Node::Ptr child)
+    {
+        m_child = std::move(child);
+    }
 
     template <class T, typename... Args>
     inline T& setChild(Args&&... args)
@@ -951,6 +910,30 @@ public:
             }
         }
     }
+};
+
+// ****************************************************************************
+//! \brief Action node that can be used to execute custom behavior. You shall
+//! implement the behavior in the onRunning() method.
+// TODO idee:
+//        // Register actions with their implementations
+//        registerNode("check_battery", [this]() {
+//            return Node::create<Action>([this]() {
+//                return checkBattery();
+//            });
+//        });
+// ****************************************************************************
+class Action: public Leaf
+{
+public:
+
+    Action() = default;
+
+    Action(Blackboard::Ptr blackboard)
+        : Leaf(blackboard)
+    {}
+
+    virtual ~Action() = default;
 };
 
 } // namespace bt

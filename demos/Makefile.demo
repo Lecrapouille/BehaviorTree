@@ -50,6 +50,11 @@ SRC_FILES += $(DEMO_FILES)
 THIRDPART_LIBS += $(call internal-lib,BehaviorTree)
 
 ###################################################
+# External dependencies
+#
+PKG_LIBS += yaml-cpp tinyxml2
+
+###################################################
 # Generic Makefile rules
 #
 include $(M)/rules/Makefile
