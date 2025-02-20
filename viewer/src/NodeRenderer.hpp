@@ -1,21 +1,25 @@
 #pragma once
 
-#include "DebugProtocol.hpp"
-#include "raylib.h"
+#include <SFML/Graphics.hpp>
+#include "BehaviorTree/BehaviorTreeVisualizer.hpp"
 
-class NodeRenderer {
+// ****************************************************************************
+//! \brief Classe pour rendre les nœuds de l'arbre de comportement
+// ****************************************************************************
+class NodeRenderer
+{
 public:
     static constexpr float NODE_WIDTH = 150.0f;
     static constexpr float NODE_HEIGHT = 40.0f;
     static constexpr float VERTICAL_SPACING = 60.0f;
     static constexpr float HORIZONTAL_SPACING = 30.0f;
 
-    NodeRenderer();
-
-    void renderNode(const char* name, bt_debug::NodeStatus status, 
-                   Vector2 position, const Font& font);
-    void drawConnection(Vector2 start, Vector2 end);
+    void renderNode(const char* name, bt::Status status, 
+                    sf::Vector2f position, const sf::Font& font,
+                    sf::RenderWindow& window);
+    void drawConnection(sf::Vector2f start, sf::Vector2f end,
+                        sf::RenderWindow& window);
 
 private:
-    Color getStatusColor(bt_debug::NodeStatus status) const;
+    sf::Color getStatusColor(bt::Status status) const;
 }; 

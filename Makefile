@@ -39,9 +39,9 @@ include $(M)/project/Makefile
 PKG_LIBS += yaml-cpp tinyxml2
 
 ###################################################
-# Standalone application
+# Behavior Tree Library
 #
-LIB_FILES := src/TreeBuilder.cpp src/TreeExporter.cpp
+LIB_FILES := $(call rwildcard,$(P)/src,*.cpp)
 INCLUDES += $(P) $(P)/src $(P)/include
 
 ###################################################
@@ -52,7 +52,15 @@ include $(M)/rules/Makefile
 ###################################################
 # Extra rules
 #
-all:: demos
+all:: viewer demos
+
+###################################################
+# Behavior Tree Viewer
+#
+.PHONY: viewer
+viewer:
+	@$(call print-from,"Compiling viewer",$(PROJECT_NAME),$(P)/viewer)
+	$(MAKE) -C $(P)/viewer all
 
 ###################################################
 # Compile demos

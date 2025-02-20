@@ -24,8 +24,7 @@
 // SOFTWARE.
 //*****************************************************************************
 
-#ifndef BEHAVIOR_TREE_EXPORTER_HPP
-#  define BEHAVIOR_TREE_EXPORTER_HPP
+#pragma once
 
 #  include "BehaviorTree/BehaviorTree.hpp"
 #  include <fstream>
@@ -46,7 +45,7 @@ public:
     //! \param[in] tree The behavior tree to export.
     //! \return YAML string representation.
     // ------------------------------------------------------------------------
-    static std::string toYAML(BehaviorTree const& tree);
+    static std::string toYAML(Tree const& tree);
 
     // ------------------------------------------------------------------------
     //! \brief Export behavior tree to our YAML file.
@@ -54,14 +53,14 @@ public:
     //! \param[in] filename Path to save the YAML file.
     //! \throw std::runtime_error if file cannot be written.
     // ------------------------------------------------------------------------
-    static void toYAMLFile(BehaviorTree const& tree, std::string const& filename);
+    static void toYAMLFile(Tree const& tree, std::string const& filename);
 
     // ------------------------------------------------------------------------
     //! \brief Export behavior tree to BehaviorTree.CPP XML format.
     //! \param[in] tree The behavior tree to export.
     //! \return XML string representation.
     // ------------------------------------------------------------------------
-    static std::string toBTCppXML(BehaviorTree const& tree);
+    static std::string toBTCppXML(Tree const& tree);
 
     // ------------------------------------------------------------------------
     //! \brief Export behavior tree to BehaviorTree.CPP XML file.
@@ -69,7 +68,7 @@ public:
     //! \param[in] filename Path to save the XML file.
     //! \throw std::runtime_error if file cannot be written.
     // ------------------------------------------------------------------------
-    static void toBTCppXMLFile(BehaviorTree const& tree, std::string const& filename);
+    static void toBTCppXMLFile(Tree const& tree, std::string const& filename);
 
 private:
     static YAML::Node generateYAMLNode(Node::Ptr const& node);
@@ -77,9 +76,11 @@ private:
     static std::string getNodeName(Node::Ptr const& node);
 
     template<typename T>
-    static void writeToFile(std::string const& content, std::string const& filename) {
+    static void writeToFile(std::string const& content, std::string const& filename)
+    {
         std::ofstream file(filename);
-        if (!file.is_open()) {
+        if (!file.is_open())
+        {
             throw std::runtime_error("Cannot open file for writing: " + filename);
         }
         file << content;
@@ -87,5 +88,3 @@ private:
 };
 
 } // namespace bt
-
-#endif

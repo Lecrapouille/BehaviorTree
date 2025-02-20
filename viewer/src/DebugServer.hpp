@@ -8,49 +8,72 @@
 
 namespace bt {
 
-/// @brief Serveur de débogage pour recevoir les données de l'arbre de comportement
-class DebugServer {
+// ****************************************************************************
+//! \brief Server to receive the behavior tree data from the application running
+//! the behavior tree.
+// ****************************************************************************
+class DebugServer
+{
 public:
     using MessageCallback = std::function<void(const std::vector<uint8_t>&)>;
 
-    /// @brief Constructeur
-    /// @param[in] port Port d'écoute du serveur
-    /// @param[in] onMessageReceived Callback appelé à la réception d'un message
-    explicit DebugServer(
-        uint16_t port = 9090,
-        MessageCallback onMessageReceived = nullptr
-    );
+    // ------------------------------------------------------------------------
+    //! \brief Constructor.
+    //! \param[in] port Listening port.
+    //! \param[in] onMessageReceived Callback called when a message is received.
+    // ------------------------------------------------------------------------
+    DebugServer(uint16_t p_port, MessageCallback p_on_message_received);
     
     ~DebugServer();
 
-    /// @brief Démarre le serveur
-    /// @return true si le démarrage est réussi
+    // ------------------------------------------------------------------------
+    //! \brief Start the server.
+    //! \return true if the server is started.
+    // ------------------------------------------------------------------------
     bool start();
 
-    /// @brief Arrête le serveur
+    // ------------------------------------------------------------------------
+    //! \brief Stop the server.
+    // ------------------------------------------------------------------------
     void stop();
 
-    /// @brief Vérifie si le serveur est connecté à un client
-    /// @return true si connecté
-    bool isConnected() const { return connected; }
+    // ------------------------------------------------------------------------
+    //! \brief Check if the server is connected to a client.
+    //! \return true if connected.
+    // ------------------------------------------------------------------------
+    inline bool isConnected() const { return m_connected; }
 
 private:
+
     void acceptConnection();
     void readMessage();
     void handleMessage(size_t bytes);
+    void createSignalSocket();
 
-    MessageCallback messageCallback;
-    bool running{false};
-    bool connected{false};
-    uint16_t port;
+private:
 
-    int serverSocket{-1};
-    int clientSocket{-1};
-    
-    std::vector<uint8_t> receiveBuffer;
+    //! \brief Maximum message size
     static constexpr size_t MAX_MESSAGE_SIZE = 1024 * 1024; // 1MB
 
-    std::thread serverThread;
+    //! \brief Receive buffer
+    std::vector<uint8_t> m_receive_buffer;
+    //! \brief Callback called when a message is received
+    MessageCallback m_message_callback;
+    //! \brief True if the server is running
+    bool m_running = false;
+    //! \brief True if the server is connected to a client
+    bool m_connected = false;
+    //! \brief Listening port
+    uint16_t m_port;
+    //! \brief Server socket
+    int m_server_socket = -1;
+    //! \brief Client socket
+    int m_client_socket = -1;
+    //! \brief Server thread
+    std::thread m_server_thread;
+    //! \brief Signal sockets pour l'arrêt
+    int m_signal_send_fd = -1;
+    int m_signal_recv_fd = -1;
 };
 
 } // namespace bt 

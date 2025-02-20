@@ -24,22 +24,20 @@
 // SOFTWARE.
 //*****************************************************************************
 
-#ifndef BEHAVIOR_TREE_BUILDER_HPP
-#  define BEHAVIOR_TREE_BUILDER_HPP
+#pragma once
 
 #  include "BehaviorTree/BehaviorTree.hpp"
 
-// ============================================================================
+// ****************************************************************************
 // Forward declarations
-// ============================================================================
+// ****************************************************************************
 namespace YAML { class Node; }
-namespace tinyxml2 { class XMLElement; class XMLDocument; }
 
 namespace bt {
 
-// ============================================================================
+// ****************************************************************************
 //! \brief Class responsible for building behavior trees from YAML/XML files.
-// ============================================================================
+// ****************************************************************************
 class TreeBuilder
 {
 public:
@@ -54,15 +52,7 @@ public:
     //! \param[in] filename Path to the YAML file.
     //! \return Unique pointer to the created behavior tree.
     // ------------------------------------------------------------------------
-    std::unique_ptr<BehaviorTree> fromYAML(std::string const& filename);
-
-    // ------------------------------------------------------------------------
-    //! \brief Create a behavior tree from XML file compatible with
-    //! BehaviorTree.CPP https://www.behaviortree.dev
-    //! \param[in] filename Path to the XML file.
-    //! \return Unique pointer to the created behavior tree.
-    // ------------------------------------------------------------------------
-    std::unique_ptr<BehaviorTree> fromXML(std::string const& filename);
+    std::unique_ptr<Tree> fromYAML(std::string const& filename);
 
     // ------------------------------------------------------------------------
     //! \brief Set the factory used to create nodes.
@@ -85,12 +75,9 @@ public:
 
 private:
     Node::Ptr parseYAMLNode(YAML::Node const& node);
-    Node::Ptr parseXMLNode(tinyxml2::XMLElement const* element);
 
 private:
     std::shared_ptr<NodeFactory> m_factory;
 };
 
 } // namespace bt
-
-#endif

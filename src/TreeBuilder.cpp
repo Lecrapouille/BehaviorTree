@@ -30,7 +30,7 @@
 
 namespace bt {
 
-std::unique_ptr<BehaviorTree> TreeBuilder::fromYAML(std::string const& filename)
+std::unique_ptr<Tree> TreeBuilder::fromYAML(std::string const& filename)
 {
     try
     {
@@ -40,7 +40,7 @@ std::unique_ptr<BehaviorTree> TreeBuilder::fromYAML(std::string const& filename)
             throw std::runtime_error("Missing 'behavior_tree' node in YAML");
         }
 
-        auto tree = std::make_unique<BehaviorTree>();
+        auto tree = std::make_unique<Tree>();
         tree->setRoot(parseYAMLNode(root["behavior_tree"]));
         return tree;
     }
@@ -145,55 +145,6 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
         }
         return action;
     }
-
-    throw std::runtime_error("Unknown node type: " + type);
-}
-
-std::unique_ptr<BehaviorTree> TreeBuilder::fromXML(std::string const& filename)
-{
-    tinyxml2::XMLDocument doc;
-    if (doc.LoadFile(filename.c_str()) != tinyxml2::XML_SUCCESS)
-    {
-        throw std::runtime_error("Failed to load XML file: " + filename);
-    }
-
-    auto root = doc.FirstChildElement("behavior_tree");
-    if (!root)
-    {
-        throw std::runtime_error("Missing root 'behavior_tree' element");
-    }
-
-    auto tree = std::make_unique<BehaviorTree>();
-    tree->setRoot(parseXMLNode(root->FirstChildElement()));
-    return tree;
-}
-
-Node::Ptr TreeBuilder::parseXMLNode(tinyxml2::XMLElement const* element)
-{
-    if (!element)
-    {
-        throw std::runtime_error("Invalid XML element");
-    }
-
-    std::string type = element->Name();
-
-    if (type == "Sequence")
-    {
-        auto seq = std::make_shared<Sequence>();
-        for (auto child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
-            seq->addChild(parseXMLNode(child));
-        }
-        return seq;
-    }
-    else if (type == "Selector")
-    {
-        auto sel = std::make_shared<Selector>();
-        for (auto child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
-            sel->addChild(parseXMLNode(child));
-        }
-        return sel;
-    }
-    // Add other node types here...
 
     throw std::runtime_error("Unknown node type: " + type);
 }

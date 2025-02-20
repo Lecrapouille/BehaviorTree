@@ -1,0 +1,35 @@
+Fenetre SFML: afficher waiting on port 8080 for BT
+
+- Ne pas utiliser yaml mais une version simplifiee ?
+
+```
+behavior_tree:
+  selector:
+    sequence:
+      action [name: check_battery]: CheckBattery
+      action [name: recharge]: Recharge
+    sequence:
+      parallel_sequence [success_threshold: 1, failure_threshold: 1]:
+        action: patrol
+        action: detect_threat
+      action: send_alert
+```
+
+- Nommer les nodes => LUT sur les pointeurs ?
+- Nommer les nodes => Node factory ?
+
+- Utiliser BT.cpp pour comparer le comportement attendu de ma lib
+
+- Action avec std::function pour override onRunning ?
+
+- Refaire les TU
+
+- Ajouter plus de demos
+
+- Finir le debugger graphique (QML ?)
+
+- Multi tree ? Subtree ? namespace blackboard ?
+
+- Integration dans une machine a etat ?
+
+- Export vers mermaid

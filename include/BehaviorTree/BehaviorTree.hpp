@@ -33,8 +33,7 @@
 //
 //*****************************************************************************
 
-#ifndef BEHAVIOR_TREE_HPP
-#  define BEHAVIOR_TREE_HPP
+#pragma once
 
 #  include <memory>
 #  include <vector>
@@ -176,11 +175,6 @@ private:
     static std::unordered_map<const Blackboard*, Entry<T>> m_maps;
 
     // ------------------------------------------------------------------------
-    //! \brief The vector of functions to erase the heterogeneous stacks
-    // ------------------------------------------------------------------------
-    std::vector<std::function<void(Blackboard&)>> m_erase_functions;
-
-    // ------------------------------------------------------------------------
     //! \brief The map of heterogeneous stacks
     // ------------------------------------------------------------------------
     std::unordered_map<std::string, std::any> storage;
@@ -311,59 +305,14 @@ protected:
 };
 
 // ****************************************************************************
-//! \brief Factory class for creating behavior tree nodes.
-//! This class allows registering custom node types that can be created by name.
-// ****************************************************************************
-class NodeFactory
-{
-public:
-    //! \brief Function type for creating nodes
-    using NodeCreator = std::function<std::unique_ptr<Node>()>;
-
-    virtual ~NodeFactory() = default;
-
-    //! \brief Register a node type with a creation function
-    //! \param[in] name Name used to identify this node type
-    //! \param[in] creator Function that creates instances of this node type
-    void registerNode(const std::string& name, NodeCreator creator)
-    {
-        m_creators[name] = std::move(creator);
-    }
-
-    //! \brief Create a node instance by name
-    //! \param[in] name The registered name of the node type to create
-    //! \return Unique pointer to the new node instance, or nullptr if name not found
-    std::unique_ptr<Node> createNode(const std::string& name) const
-    {
-        auto it = m_creators.find(name);
-        if (it != m_creators.end()) {
-            return it->second();
-        }
-        return nullptr;
-    }
-
-    //! \brief Check if a node type is registered
-    //! \param[in] name The name to check
-    //! \return True if the node type is registered
-    bool hasNode(const std::string& name) const
-    {
-        return m_creators.find(name) != m_creators.end();
-    }
-
-protected:
-    //! \brief Map of node names to their creation functions
-    std::unordered_map<std::string, NodeCreator> m_creators;
-};
-
-// ****************************************************************************
 //! \brief
 // ****************************************************************************
-class BehaviorTree : public Node
+class Tree : public Node
 {
 public:
 
     //! \brief Default constructor
-    BehaviorTree() = default;
+    Tree() = default;
 
     //! \brief Set the root node of the behavior tree
     //! \param[in] root Pointer to the root node
@@ -914,28 +863,132 @@ public:
 
 // ****************************************************************************
 //! \brief Action node that can be used to execute custom behavior. You shall
-//! implement the behavior in the onRunning() method.
-// TODO idee:
-//        // Register actions with their implementations
-//        registerNode("check_battery", [this]() {
-//            return Node::create<Action>([this]() {
-//                return checkBattery();
-//            });
-//        });
+//! override the onRunning() method to implement your behavior.
 // ****************************************************************************
-class Action: public Leaf
+using Action = Leaf;
+
+// ****************************************************************************
+//! \brief Action node that can be used to execute custom behavior. This class
+//! should not be used directly: it is used internally to sugar the class Action
+//! by hiding inheritance.
+// ****************************************************************************
+class SugarAction: public Leaf
 {
 public:
+    //! \brief Type alias for the action function
+    using Function = std::function<Status()>;
 
-    Action() = default;
-
-    Action(Blackboard::Ptr blackboard)
-        : Leaf(blackboard)
+    //! \brief Constructor taking a function to execute
+    //! \param[in] func The function to execute when the action runs
+    SugarAction(Function func)
+        : m_func(std::move(func))
     {}
 
-    virtual ~Action() = default;
+    //! \brief Constructor taking a function and blackboard
+    //! \param[in] func The function to execute when the action runs
+    //! \param[in] blackboard The blackboard to use
+    SugarAction(Function func, Blackboard::Ptr blackboard)
+        : Leaf(blackboard), m_func(std::move(func))
+    {}
+
+    virtual Status onRunning() override
+    {
+        return m_func();
+    }
+
+private:
+    Function m_func;
+};
+
+// ****************************************************************************
+//! \brief Factory class for creating behavior tree nodes.
+//! This class allows registering custom node types that can be created by name.
+// ****************************************************************************
+class NodeFactory
+{
+public:
+    //! \brief Function type for creating nodes
+    using NodeCreator = std::function<std::unique_ptr<Node>()>;
+
+    virtual ~NodeFactory() = default;
+
+    //! \brief Register a node type with a creation function
+    //! \param[in] name Name used to identify this node type
+    //! \param[in] creator Function that creates instances of this node type
+    void registerNode(const std::string& name, NodeCreator creator)
+    {
+        m_creators[name] = std::move(creator);
+    }
+
+    //! \brief Create a node instance by name
+    //! \param[in] name The registered name of the node type to create
+    //! \return Unique pointer to the new node instance, or nullptr if name not found
+    std::unique_ptr<Node> createNode(const std::string& name) const
+    {
+        auto it = m_creators.find(name);
+        if (it != m_creators.end()) {
+            return it->second();
+        }
+        return nullptr;
+    }
+
+    //! \brief Check if a node type is registered
+    //! \param[in] name The name to check
+    //! \return True if the node type is registered
+    bool hasNode(const std::string& name) const
+    {
+        return m_creators.find(name) != m_creators.end();
+    }
+
+    //! \brief Helper method to register an action with a lambda
+    //! \param[in] name Name used to identify this action
+    //! \param[in] func Lambda function implementing the action
+    void registerAction(const std::string& name, SugarAction::Function func)
+    {
+        registerNode(name, [func = std::move(func)]() {
+            return Node::create<SugarAction>(func);
+        });
+    }
+
+    //! \brief Helper method to register an action with a lambda and blackboard
+    //! \param[in] name Name used to identify this action
+    //! \param[in] func Lambda function implementing the action
+    //! \param[in] blackboard The blackboard to use
+    void registerAction(const std::string& name, 
+                       SugarAction::Function func,
+                       Blackboard::Ptr blackboard)
+    {
+        registerNode(name, [func = std::move(func), blackboard]() {
+            return Node::create<SugarAction>(func, blackboard);
+        });
+    }
+
+    //! \brief Helper template method to register a node with blackboard
+    //! \tparam T The node type to register
+    //! \param[in] name Name used to identify this node type
+    //! \param[in] blackboard The blackboard to use
+    template<typename T>
+    void registerNode(const std::string& name, Blackboard::Ptr blackboard)
+    {
+        registerNode(name, [blackboard]() {
+            return Node::create<T>(blackboard);
+        });
+    }
+
+    //! \brief Helper template method to register a node without blackboard
+    //! \tparam T The node type to register
+    //! \param[in] name Name used to identify this node type
+    template<typename T>
+    void registerNode(const std::string& name)
+    {
+        registerNode(name, []() {
+            return Node::create<T>();
+        });
+    }
+
+protected:
+    //! \brief Map of node names to their creation functions
+    std::unordered_map<std::string, NodeCreator> m_creators;
 };
 
 } // namespace bt
-
-#endif

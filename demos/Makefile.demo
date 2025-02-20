@@ -52,7 +52,8 @@ THIRDPART_LIBS += $(call internal-lib,BehaviorTree)
 ###################################################
 # External dependencies
 #
-PKG_LIBS += yaml-cpp tinyxml2
+PKG_LIBS += yaml-cpp
+# PKG_LIBS += tinyxml2
 
 ###################################################
 # Generic Makefile rules

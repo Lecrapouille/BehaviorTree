@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BehaviorTree.hpp"
-#include "NodeStatus.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <memory>
@@ -14,6 +13,9 @@
 #include <cstdint>
 #include <chrono>
 
+namespace bt {
+
+// Forward declarations
 class BehaviorNode;
 class BehaviorTree;
 
@@ -32,14 +34,53 @@ class BehaviorTree;
 class BehaviorTreeVisualizer
 {
 public:
+
+    // ------------------------------------------------------------------------
+    //! \brief Message types for communication protocol
+    //!
+    //! Defines the different types of messages that can be exchanged
+    //! between the visualizer and client.
+    // ------------------------------------------------------------------------
+    enum class MessageType : uint8_t
+    {
+        TREE_STRUCTURE = 1,  ///< Message containing tree structure
+        STATE_UPDATE = 2     ///< Message containing state update
+    };
+
+    // ------------------------------------------------------------------------
+    //! \brief Structure describing a node in the tree
+    //!
+    //! Contains all necessary information to represent
+    //! a node and its relationships in the tree.
+    // ------------------------------------------------------------------------
+    struct NodeStructure
+    {
+        uint32_t id;                        ///< Unique node identifier
+        std::string name;                   ///< Node name/type
+        uint32_t parent_id;                 ///< Parent ID (-1 for root)
+        std::vector<uint32_t> children_ids; ///< List of child node IDs
+    };
+
+    // ------------------------------------------------------------------------
+    //! \brief Structure for node state updates
+    //!
+    //! Groups a set of node states at a given time.
+    // ------------------------------------------------------------------------
+    struct StatusUpdate
+    {
+        std::chrono::system_clock::time_point timestamp; ///< Update timestamp
+        std::vector<std::pair<uint32_t, bt::Status>> states; ///< Node states (ID, status)
+    };
+
+public:
     // ------------------------------------------------------------------------
     //! \brief Constructor initializing the visualizer.
-    //! \param[in] bt Reference to the behavior tree to visualize.
+    //! \param[in] p_bt Reference to the behavior tree to visualize.
     //!
     //! Initializes the socket connection and starts the communication thread.
     //! The thread waits until a client connects.
     // ------------------------------------------------------------------------
-    explicit BehaviorTreeVisualizer(BehaviorTree& bt);
+    explicit BehaviorTreeVisualizer(bt::Tree& p_bt, std::string p_ip, uint16_t p_port);
 
     // ------------------------------------------------------------------------
     //! \brief Destructor.
@@ -87,28 +128,28 @@ private:
 
     // ------------------------------------------------------------------------
     //! \brief Builds the tree structure recursively.
-    //! \param[in] node Current node to process
-    //! \param[out] nodes Vector storing the node structure
-    //! \param[inout] nextId Next available ID for nodes
-    //! \param[in] parentId Parent node ID (-1 for root)
+    //! \param[in] p_node Current node to process
+    //! \param[out] p_nodes Vector storing the node structure
+    //! \param[inout] p_next_id Next available ID for nodes
+    //! \param[in] p_parent_id Parent node ID (-1 for root)
     //!
     //! Recursively traverses the tree assigning unique IDs to each node
     //! and building parent-child relationships.
     // ------------------------------------------------------------------------
-    void buildTreeStructure(BehaviorNode* node, 
-                          std::vector<NodeStructure>& nodes,
-                          uint32_t& nextId, 
-                          uint32_t parentId = -1);
+    void buildTreeStructure(bt::Node::Ptr p_node,
+                            std::vector<NodeStructure>& p_nodes,
+                            uint32_t& p_next_id,
+                            uint32_t p_parent_id);
 
     // ------------------------------------------------------------------------
     //! \brief Captures the state of all tree nodes.
-    //! \param[in] node Current node to process
-    //! \param[out] update Structure receiving node states
+    //! \param[in] p_node Current node to process
+    //! \param[out] p_update Structure receiving node states
     //!
     //! Recursively traverses the tree and collects the execution state
     //! (SUCCESS, FAILURE, RUNNING) of each node.
     // ------------------------------------------------------------------------
-    void captureNodeStates(BehaviorNode* node, StatusUpdate& update);
+    void captureNodeStates(bt::Node::Ptr p_node, StatusUpdate& p_update);
 
     // ------------------------------------------------------------------------
     //! \brief Main communication thread function.
@@ -120,63 +161,36 @@ private:
 
     // ------------------------------------------------------------------------
     //! \brief Sends a state update to the visualizer.
-    //! \param[in] update Structure containing states to send
+    //! \param[in] p_update Structure containing states to send
     //!
     //! Serializes and sends node states to the client via socket.
     // ------------------------------------------------------------------------
-    void sendStatusUpdate(const StatusUpdate& update);
+    void sendStatusUpdate(const StatusUpdate& p_update);
 
 private:
-    // ------------------------------------------------------------------------
-    //! \brief Message types for communication protocol
-    //!
-    //! Defines the different types of messages that can be exchanged
-    //! between the visualizer and client.
-    // ------------------------------------------------------------------------
-    enum class MessageType : uint8_t {
-        treeStructure = 1,  ///< Message containing tree structure
-        stateUpdate = 2     ///< Message containing state update
-    };
-
-    // ------------------------------------------------------------------------
-    //! \brief Structure describing a node in the tree
-    //!
-    //! Contains all necessary information to represent
-    //! a node and its relationships in the tree.
-    // ------------------------------------------------------------------------
-    struct NodeStructure {
-        uint32_t id;                       ///< Unique node identifier
-        std::string name;                  ///< Node name/type
-        uint32_t parentId;                 ///< Parent ID (-1 for root)
-        std::vector<uint32_t> childrenIds; ///< List of child node IDs
-    };
-
-    // ------------------------------------------------------------------------
-    //! \brief Structure for node state updates
-    //!
-    //! Groups a set of node states at a given time.
-    // ------------------------------------------------------------------------
-    struct StatusUpdate {
-        std::chrono::system_clock::time_point timestamp; ///< Update timestamp
-        std::vector<std::pair<uint32_t, bt::NodeStatus>> states; ///< Node states (ID, status)
-    };
 
     //! Behavior tree to visualize
-    BehaviorTree& m_behaviorTree;
+    bt::Tree& m_behavior_tree;
     //! Whether the client is connected
-    bool m_connected{false};
+    bool m_connected = false;
     //! Whether the worker thread is running
-    bool m_running{true};
+    bool m_running = true;
     //! Whether the tree structure has been sent
-    bool m_treeStructureSent{false};
+    bool m_tree_structure_sent = false;
     //! Map of behavior node to its ID
-    std::unordered_map<BehaviorNode*, uint32_t> m_nodeToId;
+    std::unordered_map<bt::Node*, uint32_t> m_node_to_id;
     //! Socket for the debug server
-    int m_socket{-1};
+    int m_socket = -1;
+    //! IP address
+    std::string m_ip;
+    //! Port number
+    uint16_t m_port;
     //! Worker thread
-    std::thread m_workerThread;
+    std::thread m_worker_thread;
     //! Queue of status updates
-    std::queue<StatusUpdate> m_statusQueue;
+    std::queue<StatusUpdate> m_status_queue;
     //! Mutex for the queue
-    std::mutex m_queueMutex;
-}; 
+    std::mutex m_queue_mutex;
+};
+
+} // namespace bt

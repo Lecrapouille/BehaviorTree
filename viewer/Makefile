@@ -28,34 +28,31 @@ M := $(P)/.makefile
 # Project definition
 #
 include $(P)/Makefile.common
-TARGET_NAME := $(PROJECT_NAME)-UnitTest
-TARGET_DESCRIPTION := Unit tests for $(PROJECT_NAME)
-COMPILATION_MODE = test
+TARGET_NAME := BehaviorTreeViewer
+TARGET_DESCRIPTION := Real-time Behavior Tree Viewer
 include $(M)/project/Makefile
 
 ###################################################
 # Inform Makefile where to find *.cpp files
 #
-VPATH += $(P)/tests $(P)/src
+VPATH += $(P)/viewer/src
 
 ###################################################
 # Inform Makefile where to find header files
 #
-INCLUDES += $(P) $(P)/src $(P)/include
+INCLUDES += $(P) $(P)/viewer/src $(P)/include
 
 ###################################################
-# Make the list of compiled files for the library
+# External dependencies
 #
-SRC_FILES += $(call rwildcard,$(P)/src,*.cpp)
-SRC_FILES += $(call rwildcard,$(P)/tests,*.cpp)
+PKG_LIBS += sfml-graphics
+PKG_LIBS += sfml-window
+PKG_LIBS += sfml-system
 
 ###################################################
-# Set Libraries. For knowing which libraries
-# is needed please read the external/README.md file.
+# Make the list of compiled files for the application
 #
-PKG_LIBS += yaml-cpp
-# PKG_LIBS += tinyxml2
-PKG_LIBS += gtest gmock
+SRC_FILES += $(call rwildcard,$(P)/viewer/src,*.cpp)
 
 ###################################################
 # Generic Makefile rules

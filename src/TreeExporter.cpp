@@ -28,19 +28,19 @@
 
 namespace bt {
 
-std::string TreeExporter::toYAML(BehaviorTree const& tree)
+std::string TreeExporter::toYAML(Tree const& tree)
 {
     YAML::Node root;
     root["behavior_tree"] = generateYAMLNode(tree.getRoot());
     return YAML::Dump(root);
 }
 
-void TreeExporter::toYAMLFile(BehaviorTree const& tree, std::string const& filename)
+void TreeExporter::toYAMLFile(Tree const& tree, std::string const& filename)
 {
     writeToFile<YAML::Node>(toYAML(tree), filename);
 }
 
-std::string TreeExporter::toBTCppXML(BehaviorTree const& tree)
+std::string TreeExporter::toBTCppXML(Tree const& tree)
 {
     std::stringstream xml;
     xml << "<?xml version=\"1.0\" ?>" << std::endl;
@@ -56,7 +56,7 @@ std::string TreeExporter::toBTCppXML(BehaviorTree const& tree)
     return xml.str();
 }
 
-void TreeExporter::toBTCppXMLFile(BehaviorTree const& tree, std::string const& filename)
+void TreeExporter::toBTCppXMLFile(Tree const& tree, std::string const& filename)
 {
     writeToFile<std::stringstream>(toBTCppXML(tree), filename);
 }
@@ -101,7 +101,7 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
             yaml_node["child"] = generateYAMLNode(repeater->getChild());
         }
     }
-    else if (auto leaf = std::dynamic_pointer_cast<Leaf>(node)) {
+    else if (auto action = std::dynamic_pointer_cast<Action>(node)) {
         yaml_node["type"] = "action";
         yaml_node["name"] = getNodeName(node);
     }
@@ -148,7 +148,7 @@ void TreeExporter::generateBTCppXML(Node::Ptr const& node, std::stringstream& xm
         }
         xml << spaces << "</RetryUntilSuccessful>" << std::endl;
     }
-    else if (auto leaf = std::dynamic_pointer_cast<Leaf>(node)) {
+    else if (auto action = std::dynamic_pointer_cast<Action>(node)) {
         xml << spaces << "<Action ID=\"" << getNodeName(node) << "\"/>" << std::endl;
     }
 }

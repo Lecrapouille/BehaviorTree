@@ -4,6 +4,7 @@
 
 #include "BehaviorTree/TreeBuilder.hpp"
 #include "BehaviorTree/BehaviorTree.hpp"
+#include "BehaviorTree/BehaviorTreeVisualizer.hpp"
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -11,33 +12,6 @@
 
 namespace bt {
 namespace demo {
-
-// ****************************************************************************
-//! \brief Helper function to display blackboard contents
-// ****************************************************************************
-void displayBlackboard(const Blackboard::Ptr& blackboard)
-{
-    if (!blackboard) {
-        std::cout << "Blackboard is null!\n";
-        return;
-    }
-
-    std::cout << "=== Blackboard Contents ===\n";
-    
-    // Afficher le niveau de batterie
-    auto [battery, hasBattery] = blackboard->get<int>("battery_level");
-    if (hasBattery) {
-        std::cout << "battery_level: " << battery << "%\n";
-    }
-    
-    // Afficher l'état de détection de menace
-    auto [threat, hasThreat] = blackboard->get<bool>("threat_detected");
-    if (hasThreat) {
-        std::cout << "threat_detected: " << (threat ? "yes" : "no") << "\n";
-    }
-    
-    std::cout << "===========================\n";
-}
 
 // ****************************************************************************
 //! \brief Check if battery level is above threshold
@@ -142,32 +116,34 @@ class SecurityRobotFactory : public bt::NodeFactory
 {
 public:
     SecurityRobotFactory(bt::Blackboard::Ptr blackboard)
-        : m_blackboard(blackboard)
     {
-        // Register actions with their implementations
-        registerNode("check_battery", [this]() {
-            return bt::Node::create<CheckBattery>(m_blackboard);
-        });
+        // Register actions with simplified syntax
+        // Equivalent to registerNode<CheckBattery>("check_battery", blackboard);
+        registerAction("check_battery", [blackboard]() {
+            int current_battery = blackboard->getOr<int>("battery_level", 100);
+            current_battery = std::max(0, current_battery - 5);
+            blackboard->set<int>("battery_level", current_battery);
+            
+            std::cout << "🔋 Checking battery: " << current_battery << "%\n";
+            return (current_battery > 20) ? Status::FAILURE : Status::SUCCESS;
+        }, blackboard);
 
-        registerNode("patrol", [this]() {
-            return bt::Node::create<Patrol>(m_blackboard);
-        });
+        // Register actions with simplified syntax
+        // Equivalent to registerNode<Patrol>("patrol", blackboard);
+        registerAction("patrol", [blackboard]() {
+            int current_battery = blackboard->getOr<int>("battery_level", 100);
+            current_battery = std::max(0, current_battery - 10);
+            blackboard->set<int>("battery_level", current_battery);
+            
+            std::cout << "🤖 Patrolling area... Battery: " << current_battery << "%\n";
+            return Status::RUNNING;
+        }, blackboard);
 
-        registerNode("recharge", [this]() {
-            return bt::Node::create<Recharge>(m_blackboard);
-        });
-
-        registerNode("detect_threat", [this]() {
-            return bt::Node::create<DetectThreat>(m_blackboard);
-        });
-
-        registerNode("send_alert", []() {
-            return bt::Node::create<SendAlert>();
-        });
+        // Simplified node registration using templates
+        registerNode<Recharge>("recharge", blackboard);
+        registerNode<DetectThreat>("detect_threat", blackboard);
+        registerNode<SendAlert>("send_alert");
     }
-
-private:
-    bt::Blackboard::Ptr m_blackboard;
 };
 
 // ****************************************************************************
@@ -192,21 +168,25 @@ void runDemo()
 
     tree->setBlackboard(blackboard);
 
+    // Initialize the connection with the visualizer
+    BehaviorTreeVisualizer visualizer(*tree, "127.0.0.1", 9090);
+
     // Simulation
     std::cout << "Starting security robot demo...\n";
     for (int i = 0; i < 20; ++i)
     {
         std::cout << "\n--- Tick " << i << " ---\n";
-        // displayBlackboard(blackboard);
 
         // Simulate state changes
         if (i == 3) blackboard->set<bool>("threat_detected", true);
         if (i == 5) blackboard->set<int>("battery_level", 10);
         if (i == 10) blackboard->set<bool>("threat_detected", false);
 
+        // Update the visualizer
+        visualizer.updateDebugInfo();
+
+        // Tick the tree
         tree->tick();
-        // displayBlackboard(blackboard);
-        
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
