@@ -73,7 +73,6 @@ public:
 private:
     static YAML::Node generateYAMLNode(Node::Ptr const& node);
     static void generateBTCppXML(Node::Ptr const& node, std::stringstream& xml, int indent);
-    static std::string getNodeName(Node::Ptr const& node);
 
     template<typename T>
     static void writeToFile(std::string const& content, std::string const& filename)

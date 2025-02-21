@@ -247,6 +247,12 @@ public:
     }
 
     // ------------------------------------------------------------------------
+    //! \brief Get the status of the node
+    //! \return The status of the node
+    // ------------------------------------------------------------------------
+    inline Status getStatus() const { return m_status; }
+
+    // ------------------------------------------------------------------------
     //! \brief Check if the node is successful
     //! \return True if the node is successful, false otherwise
     // ------------------------------------------------------------------------
@@ -294,6 +300,11 @@ private:
     //! cleanup, if needed.
     // ------------------------------------------------------------------------
     virtual void onHalted(Status /*status*/) {}
+
+public:
+
+    //! \brief The name of the node
+    std::string name;
 
 protected:
 
@@ -392,7 +403,7 @@ public:
 
     //! \brief Get the children nodes
     //! \return Const reference to the vector of child nodes
-    std::vector<Node::Ptr> const& children() const
+    std::vector<Node::Ptr> const& getChildren() const
     {
         return m_children;
     }

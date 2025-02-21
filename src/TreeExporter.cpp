@@ -68,7 +68,7 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
     if (auto sequence = std::dynamic_pointer_cast<Sequence>(node)) {
         yaml_node["type"] = "sequence";
         YAML::Node children;
-        for (auto const& child : sequence->children()) {
+        for (auto const& child : sequence->getChildren()) {
             children.push_back(generateYAMLNode(child));
         }
         yaml_node["children"] = children;
@@ -76,7 +76,7 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
     else if (auto selector = std::dynamic_pointer_cast<Selector>(node)) {
         yaml_node["type"] = "selector";
         YAML::Node children;
-        for (auto const& child : selector->children()) {
+        for (auto const& child : selector->getChildren()) {
             children.push_back(generateYAMLNode(child));
         }
         yaml_node["children"] = children;
@@ -84,7 +84,7 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
     else if (auto parallel = std::dynamic_pointer_cast<ParallelSequence>(node)) {
         yaml_node["type"] = "parallel";
         YAML::Node children;
-        for (auto const& child : parallel->children()) {
+        for (auto const& child : parallel->getChildren()) {
             children.push_back(generateYAMLNode(child));
         }
         yaml_node["children"] = children;
@@ -103,7 +103,7 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
     }
     else if (auto action = std::dynamic_pointer_cast<Action>(node)) {
         yaml_node["type"] = "action";
-        yaml_node["name"] = getNodeName(node);
+        yaml_node["name"] = node->name;
     }
 
     return yaml_node;
@@ -115,21 +115,21 @@ void TreeExporter::generateBTCppXML(Node::Ptr const& node, std::stringstream& xm
 
     if (auto sequence = std::dynamic_pointer_cast<Sequence>(node)) {
         xml << spaces << "<Sequence>" << std::endl;
-        for (auto const& child : sequence->children()) {
+        for (auto const& child : sequence->getChildren()) {
             generateBTCppXML(child, xml, indent + 2);
         }
         xml << spaces << "</Sequence>" << std::endl;
     }
     else if (auto selector = std::dynamic_pointer_cast<Selector>(node)) {
         xml << spaces << "<Fallback>" << std::endl;  // BT.CPP uses Fallback instead of Selector
-        for (auto const& child : selector->children()) {
+        for (auto const& child : selector->getChildren()) {
             generateBTCppXML(child, xml, indent + 2);
         }
         xml << spaces << "</Fallback>" << std::endl;
     }
     else if (auto parallel = std::dynamic_pointer_cast<ParallelSequence>(node)) {
         xml << spaces << "<Parallel success_threshold=\"1\" failure_threshold=\"1\">" << std::endl;
-        for (auto const& child : parallel->children()) {
+        for (auto const& child : parallel->getChildren()) {
             generateBTCppXML(child, xml, indent + 2);
         }
         xml << spaces << "</Parallel>" << std::endl;
@@ -149,15 +149,8 @@ void TreeExporter::generateBTCppXML(Node::Ptr const& node, std::stringstream& xm
         xml << spaces << "</RetryUntilSuccessful>" << std::endl;
     }
     else if (auto action = std::dynamic_pointer_cast<Action>(node)) {
-        xml << spaces << "<Action ID=\"" << getNodeName(node) << "\"/>" << std::endl;
+        xml << spaces << "<Action ID=\"" << node->name << "\"/>" << std::endl;
     }
-}
-
-std::string TreeExporter::getNodeName(Node::Ptr const& node)
-{
-    // Pour l'instant, on utilise le nom de la classe
-    // À améliorer plus tard avec un système de nommage personnalisé
-    return typeid(*node).name();
 }
 
 } // namespace bt

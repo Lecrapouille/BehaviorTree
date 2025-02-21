@@ -108,15 +108,15 @@ behavior_tree:
     // Verify that the structure is correct
     auto root = dynamic_cast<bt::Sequence*>(tree->getRoot().get());
     ASSERT_TRUE(root != nullptr);
-    ASSERT_EQ(root->children().size(), 2);
+    ASSERT_EQ(root->getChildren().size(), 2);
 
-    auto firstChild = dynamic_cast<bt::Selector*>(root->children()[0].get());
+    auto firstChild = dynamic_cast<bt::Selector*>(root->getChildren()[0].get());
     ASSERT_TRUE(firstChild != nullptr);
-    ASSERT_EQ(firstChild->children().size(), 1);
+    ASSERT_EQ(firstChild->getChildren().size(), 1);
 
-    auto secondChild = dynamic_cast<bt::Selector*>(root->children()[1].get());
+    auto secondChild = dynamic_cast<bt::Selector*>(root->getChildren()[1].get());
     ASSERT_TRUE(secondChild != nullptr);
-    ASSERT_EQ(secondChild->children().size(), 0);
+    ASSERT_EQ(secondChild->getChildren().size(), 0);
 
     // Clean up
     std::remove("test.yaml");
