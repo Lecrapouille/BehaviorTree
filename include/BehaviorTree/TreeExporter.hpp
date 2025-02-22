@@ -28,8 +28,11 @@
 
 #  include "BehaviorTree/BehaviorTree.hpp"
 #  include <fstream>
-#  include <sstream>
-#  include <yaml-cpp/yaml.h>
+
+// ****************************************************************************
+// Forward declarations
+// ****************************************************************************
+namespace YAML { class Node; }
 
 namespace bt {
 

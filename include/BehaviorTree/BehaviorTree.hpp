@@ -547,7 +547,7 @@ public:
 
 // ****************************************************************************
 //! \brief The StatefulSelector composite ticks each child node in order, and
-//! remembers what child it prevously tried to tick.  If a child succeeds or
+//! remembers what child it previously tried to tick.  If a child succeeds or
 //! runs, the stateful selector returns the same status.  In the next tick, it
 //! will try to run the next child or start from the beginning again.  If all
 //! children fails, only then does the stateful selector fail.
@@ -579,7 +579,7 @@ public:
 
 // ****************************************************************************
 //! \brief The StatefulSequence composite ticks each child node in order, and
-//! remembers what child it prevously tried to tick.  If a child fails or runs,
+//! remembers what child it previously tried to tick.  If a child fails or runs,
 //! the stateful sequence returns the same status.  In the next tick, it will
 //! try to run the next child or start from the beginning again.  If all
 //! children succeeds, only then does the stateful sequence succeed.

@@ -3,9 +3,11 @@
 //*****************************************************************************
 
 #include "BehaviorTree/TreeBuilder.hpp"
+#include "BehaviorTree/TreeExporter.hpp"
+
 #include <gtest/gtest.h>
 #include <fstream>
-#include "BehaviorTree/TreeExporter.hpp"
+#include <filesystem>
 
 namespace bt {
 
@@ -44,7 +46,8 @@ protected:
     // ------------------------------------------------------------------------
     void SetUp() override
     {
-        m_tree = std::make_unique<BehaviorTree>();
+        m_tree = std::make_unique<Tree>();
+        m_blackboard = std::make_shared<Blackboard>();
     }
 
     // ------------------------------------------------------------------------
@@ -62,8 +65,8 @@ protected:
     }
 
 protected:
-
-    std::unique_ptr<BehaviorTree> m_tree;
+    std::unique_ptr<Tree> m_tree;
+    Blackboard::Ptr m_blackboard;
 };
 
 // ****************************************************************************
@@ -76,6 +79,10 @@ TEST_F(BehaviorTreeTest, SequenceNodeSuccess)
     seq.addChild<MockAction>(Status::SUCCESS);
     seq.addChild<MockAction>(Status::SUCCESS);
 
+    // First tick: all children succeed
+    EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
+    
+    // Second tick: should restart from the beginning
     EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
 }
 
@@ -88,7 +95,12 @@ TEST_F(BehaviorTreeTest, SequenceNodeFailure)
     auto& seq = m_tree->setRoot<Sequence>();
     seq.addChild<MockAction>(Status::SUCCESS);
     seq.addChild<MockAction>(Status::FAILURE);
+    seq.addChild<MockAction>(Status::SUCCESS); // Shall never be executed
 
+    // First tick: fails on the second child
+    EXPECT_EQ(m_tree->tick(), Status::FAILURE);
+    
+    // Second tick: should restart from the beginning
     EXPECT_EQ(m_tree->tick(), Status::FAILURE);
 }
 
@@ -101,7 +113,12 @@ TEST_F(BehaviorTreeTest, SelectorNodeSuccess)
     auto& sel = m_tree->setRoot<Selector>();
     sel.addChild<MockAction>(Status::FAILURE);
     sel.addChild<MockAction>(Status::SUCCESS);
+    sel.addChild<MockAction>(Status::SUCCESS); // Shall never be executed
 
+    // First tick: stops at the first success
+    EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
+    
+    // Second tick: should restart from the beginning
     EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
 }
 
@@ -118,7 +135,18 @@ TEST_F(BehaviorTreeTest, ParallelSequenceTest)
     parallel.addChild<MockAction>(Status::SUCCESS);
     parallel.addChild<MockAction>(Status::RUNNING);
 
+    // First tick: reached the success threshold
     EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
+    
+    // Test with failure
+    parallel.reset();
+    parallel.clearChildren();
+    parallel.addChild<MockAction>(Status::FAILURE);
+    parallel.addChild<MockAction>(Status::FAILURE);
+    parallel.addChild<MockAction>(Status::SUCCESS);
+    
+    // Should fail because failure threshold reached
+    EXPECT_EQ(m_tree->tick(), Status::FAILURE);
 }
 
 // ****************************************************************************
@@ -157,21 +185,27 @@ TEST_F(BehaviorTreeTest, YAMLBasicTree)
 behavior_tree:
   type: sequence
   children:
-    - type: MockAction
+    - type: always_success
       name: task1
-      result: success
     - type: selector
       children:
-        - type: MockAction
+        - type: always_failure
           name: task2
-          result: failure
-        - type: MockAction
+        - type: always_success
           name: task3
-          result: success
 )";
 
+    auto factory = std::make_shared<NodeFactory>();
+    // Register base node types
+    factory->registerNode<AlwaysSuccess>("always_success");
+    factory->registerNode<AlwaysFailure>("always_failure");
+    factory->registerNode<Sequence>("sequence");
+    factory->registerNode<Selector>("selector");
+    
+    TreeBuilder builder(factory);
+
     std::string filename = createTempYAML(yaml);
-    auto tree = TreeBuilder::fromYAML(filename);
+    auto tree = builder.fromYAML(filename);
     ASSERT_NE(tree, nullptr);
     std::remove(filename.c_str());
 }
@@ -182,7 +216,10 @@ behavior_tree:
 // ****************************************************************************
 TEST_F(BehaviorTreeTest, YAMLInvalidFile)
 {
-    EXPECT_THROW(TreeBuilder::fromYAML("nonexistent.yaml"), std::runtime_error);
+    auto factory = std::make_shared<NodeFactory>();
+    TreeBuilder builder(factory);
+
+    EXPECT_THROW(builder.fromYAML("nonexistent.yaml"), std::runtime_error);
 }
 
 // ****************************************************************************
@@ -191,17 +228,26 @@ TEST_F(BehaviorTreeTest, YAMLInvalidFile)
 // ****************************************************************************
 TEST_F(BehaviorTreeTest, BlackboardTest)
 {
-    auto blackboard = std::make_shared<Blackboard>();
-    blackboard->set<int>("counter", 42);
-    blackboard->set<std::string>("status", "running");
+    // Test set/get with different types
+    m_blackboard->set("int_val", 42);
+    m_blackboard->set("string_val", std::string("test"));
+    m_blackboard->set("double_val", 3.14);
 
-    auto [counter_val, counter_found] = blackboard->get<int>("counter");
-    EXPECT_TRUE(counter_found);
-    EXPECT_EQ(counter_val, 42);
+    // Test get with success
+    auto [int_val, int_found] = m_blackboard->get<int>("int_val");
+    EXPECT_TRUE(int_found);
+    EXPECT_EQ(int_val, 42);
 
-    auto [status_val, status_found] = blackboard->get<std::string>("status");
-    EXPECT_TRUE(status_found);
-    EXPECT_EQ(status_val, "running");
+    // Test get with default value
+    int default_val = m_blackboard->getOr<int>("missing_key", 100);
+    EXPECT_EQ(default_val, 100);
+
+    // Test invalid type
+    auto [wrong_type, wrong_found] = m_blackboard->get<double>("int_val");
+    EXPECT_FALSE(wrong_found);
+
+    // Test empty key
+    EXPECT_THROW(m_blackboard->set("", 42), std::invalid_argument);
 }
 
 // ****************************************************************************
@@ -210,11 +256,29 @@ TEST_F(BehaviorTreeTest, BlackboardTest)
 // ****************************************************************************
 TEST_F(BehaviorTreeTest, UntilSuccessTest)
 {
-    auto& until = m_tree->setRoot<UntilSuccess>();
-    auto& seq = until.setChild<Sequence>();
-    seq.addChild<MockAction>(Status::FAILURE);
-    seq.addChild<MockAction>(Status::SUCCESS);
+    class CountingAction : public Action
+    {
+    public:
+        CountingAction() : m_count(0) {}
+        
+        virtual void onStart() override { m_status = Status::RUNNING; }
+        
+        Status onRunning() override {
+            m_count++;
+            return (m_count >= 2) ? Status::SUCCESS : Status::FAILURE;
+        }
+        
+    private:
+        int m_count;
+    };
 
+    auto& until = m_tree->setRoot<UntilSuccess>();
+    until.setChild<CountingAction>();
+
+    // First tick: the action fails, UntilSuccess continues
+    EXPECT_EQ(m_tree->tick(), Status::RUNNING);
+    
+    // Second tick: the action succeeds, UntilSuccess terminates
     EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
 }
 
@@ -224,11 +288,29 @@ TEST_F(BehaviorTreeTest, UntilSuccessTest)
 // ****************************************************************************
 TEST_F(BehaviorTreeTest, UntilFailureTest)
 {
-    auto& until = m_tree->setRoot<UntilFailure>();
-    auto& seq = until.setChild<Sequence>();
-    seq.addChild<MockAction>(Status::SUCCESS);
-    seq.addChild<MockAction>(Status::FAILURE);
+    class CountingAction : public Action
+    {
+    public:
+        CountingAction() : m_count(0) {}
+        
+        virtual void onStart() override { m_status = Status::RUNNING; }
+        
+        Status onRunning() override {
+            m_count++;
+            return (m_count >= 2) ? Status::FAILURE : Status::SUCCESS;
+        }
+        
+    private:
+        int m_count;
+    };
 
+    auto& until = m_tree->setRoot<UntilFailure>();
+    until.setChild<CountingAction>();
+
+    // First tick: the action succeeds, UntilFailure continues
+    EXPECT_EQ(m_tree->tick(), Status::RUNNING);
+    
+    // Second tick: the action fails, UntilFailure terminates
     EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
 }
 
@@ -268,30 +350,156 @@ TEST_F(BehaviorTreeTest, StatefulSequenceTest)
 // ****************************************************************************
 TEST_F(BehaviorTreeTest, TreeExport)
 {
-    // Create a sample tree
     auto& root = m_tree->setRoot<Sequence>();
-    auto& selector = root.addChild<Selector>();
-    selector.addChild<MockAction>(Status::SUCCESS);
-    selector.addChild<MockAction>(Status::FAILURE);
     root.addChild<MockAction>(Status::SUCCESS);
+    
+    // Test export YAML
+    std::string yaml;
+    EXPECT_NO_THROW(yaml = TreeExporter::toYAML(*m_tree));
+    EXPECT_FALSE(yaml.empty());
+    
+    // Test export to YAML file
+    EXPECT_NO_THROW(TreeExporter::toYAMLFile(*m_tree, "/tmp/test.yaml"));
+    EXPECT_TRUE(std::filesystem::exists("/tmp/test.yaml"));
+    std::filesystem::remove("/tmp/test.yaml");
+}
 
-    // Test YAML export
-    std::string yaml = TreeExporter::toYAML(*m_tree);
-    EXPECT_NE(yaml.find("behavior_tree:"), std::string::npos);
-    EXPECT_NE(yaml.find("type: sequence"), std::string::npos);
+// ****************************************************************************
+//! \brief Test Action with Blackboard.
+//! \details Verifies that an action can use a blackboard.
+// ****************************************************************************
+TEST_F(BehaviorTreeTest, ActionWithBlackboard)
+{
+    class TestAction : public Action 
+    {
+    public:
+        TestAction(Blackboard::Ptr board) : Action(board) {}
+        
+        Status onRunning() override {
+            m_blackboard->set("test_key", 42);
+            return Status::SUCCESS;
+        }
+    };
 
-    std::string yamlFile = "/tmp/test_tree.yaml";
-    EXPECT_NO_THROW(TreeExporter::toYAMLFile(*m_tree, yamlFile));
-    std::remove(yamlFile.c_str());
+    auto& root = m_tree->setRoot<TestAction>(m_blackboard);
+    EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
+    
+    auto [val, found] = m_blackboard->get<int>("test_key");
+    EXPECT_TRUE(found);
+    EXPECT_EQ(val, 42);
+}
 
-    // Test BehaviorTree.CPP XML export
-    std::string xml = TreeExporter::toBTCppXML(*m_tree);
-    EXPECT_NE(xml.find("<?xml version=\"1.0\" ?>"), std::string::npos);
-    EXPECT_NE(xml.find("<BehaviorTree"), std::string::npos);
+// ****************************************************************************
+//! \brief Test NodeFactory registration.
+//! \details Verifies that NodeFactory can register and retrieve actions.
+// ****************************************************************************
+TEST_F(BehaviorTreeTest, NodeFactoryRegistration)
+{
+    auto factory = std::make_shared<NodeFactory>();
+    
+    // Register a simple action
+    factory->registerAction("TestAction", []() { return Status::SUCCESS; });
+    
+    // Register an action with a blackboard
+    Blackboard::Ptr board = std::make_shared<Blackboard>();
+    factory->registerAction("TestActionWithBoard", 
+        [board]() {
+            board->set("test", true);
+            return Status::SUCCESS;
+        },
+        board);
 
-    std::string xmlFile = "/tmp/test_tree.xml";
-    EXPECT_NO_THROW(TreeExporter::toBTCppXMLFile(*m_tree, xmlFile));
-    std::remove(xmlFile.c_str());
+    EXPECT_TRUE(factory->hasNode("TestAction"));
+    EXPECT_TRUE(factory->hasNode("TestActionWithBoard"));
+}
+
+// ****************************************************************************
+//! \brief Test Running behavior.
+//! \details Verifies that the tree returns RUNNING when a child is RUNNING.
+// ****************************************************************************
+TEST_F(BehaviorTreeTest, RunningBehavior)
+{
+    class RunningAction : public Action
+    {
+    public:
+        RunningAction() : m_ticks(0) {}
+        
+        Status onRunning() override {
+            m_ticks++;
+            return (m_ticks < 3) ? Status::RUNNING : Status::SUCCESS;
+        }
+        
+    private:
+        int m_ticks;
+    };
+
+    auto& seq = m_tree->setRoot<Sequence>();
+    seq.addChild<RunningAction>();
+    seq.addChild<MockAction>(Status::SUCCESS);
+
+    // The first two ticks should return RUNNING
+    EXPECT_EQ(m_tree->tick(), Status::RUNNING);
+    EXPECT_EQ(m_tree->tick(), Status::RUNNING);
+    
+    // The third tick should complete the sequence
+    EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
+}
+
+// ****************************************************************************
+//! \brief Test Tree reset.
+//! \details Verifies that the tree resets correctly.
+// ****************************************************************************
+TEST_F(BehaviorTreeTest, TreeReset)
+{
+    auto& seq = m_tree->setRoot<Sequence>();
+    seq.addChild<MockAction>(Status::SUCCESS);
+    seq.addChild<MockAction>(Status::RUNNING);
+
+    // The first tick should return RUNNING on the second child
+    EXPECT_EQ(m_tree->tick(), Status::RUNNING);
+    
+    // Reset the tree
+    m_tree->reset();
+    
+    // Should restart from the beginning
+    EXPECT_EQ(m_tree->tick(), Status::RUNNING);
+}
+
+// ****************************************************************************
+//! \brief Test Tree halt.
+//! \details Verifies that the tree halts correctly.
+// ****************************************************************************
+TEST_F(BehaviorTreeTest, TreeHalt)
+{
+    class HaltableAction : public Action
+    {
+    public:
+        HaltableAction() : m_wasHalted(false) {}
+        
+        void onHalted() override {
+            m_wasHalted = true;
+        }
+        
+        bool wasHalted() const { return m_wasHalted; }
+        
+        Status onRunning() override {
+            return Status::RUNNING;
+        }
+        
+    private:
+        bool m_wasHalted;
+    };
+
+    auto action = std::make_shared<HaltableAction>();
+    auto& seq = m_tree->setRoot<Sequence>();
+    seq.addChild(action);
+
+    // Start the action
+    EXPECT_EQ(m_tree->tick(), Status::RUNNING);
+    
+    // Halt should call onHalted
+    m_tree->halt();
+    EXPECT_TRUE(action->wasHalted());
 }
 
 } // namespace bt

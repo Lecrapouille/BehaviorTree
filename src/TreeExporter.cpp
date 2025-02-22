@@ -25,6 +25,8 @@
 //*****************************************************************************
 
 #include "BehaviorTree/TreeExporter.hpp"
+#include <yaml-cpp/yaml.h>
+#include <sstream>
 
 namespace bt {
 

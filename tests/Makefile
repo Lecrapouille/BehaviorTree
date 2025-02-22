@@ -50,6 +50,13 @@ SRC_FILES += $(call rwildcard,$(P)/src,*.cpp)
 SRC_FILES += $(call rwildcard,$(P)/tests,*.cpp)
 
 ###################################################
+# Compare results with
+# https://github.com/BehaviorTree/BehaviorTree.CPP
+#
+DEFINES += -DUSE_LIB_BEHAVIOR_TREE_CPP
+THIRDPART_LIBS += libbehaviortree_cpp
+
+###################################################
 # Set Libraries. For knowing which libraries
 # is needed please read the external/README.md file.
 #
