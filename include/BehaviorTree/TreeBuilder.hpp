@@ -41,11 +41,18 @@ namespace bt {
 class TreeBuilder
 {
 public:
-    //! \brief Constructor with node factory
-    //! \param[in] factory Factory used to create action nodes
+    // ------------------------------------------------------------------------
+    //! \brief Constructor with node factory.
+    //! \param[in] factory Factory used to create action nodes.
+    // ------------------------------------------------------------------------
     explicit TreeBuilder(std::shared_ptr<NodeFactory> factory)
         : m_factory(std::move(factory))
     {}
+
+    // ------------------------------------------------------------------------
+    //! \brief Default constructor. You shall set a factory before using the builder.
+    // ------------------------------------------------------------------------
+    TreeBuilder() = default;
 
     // ------------------------------------------------------------------------
     //! \brief Create a behavior tree from YAML file.
@@ -55,12 +62,44 @@ public:
     std::unique_ptr<Tree> fromYAML(std::string const& filename);
 
     // ------------------------------------------------------------------------
+    //! \brief Create a behavior tree from YAML text string.
+    //! \param[in] yaml_text String containing the YAML definition.
+    //! \return Unique pointer to the created behavior tree.
+    // ------------------------------------------------------------------------
+    std::unique_ptr<Tree> fromText(std::string const& yaml_text);
+
+    // ------------------------------------------------------------------------
     //! \brief Set the factory used to create nodes.
     //! \param[in] factory Pointer to the node factory.
     // ------------------------------------------------------------------------
     static void setFactory(NodeFactory& factory)
     {
         getFactory() = factory;
+    }
+
+    // ------------------------------------------------------------------------
+    //! \brief Create and set a factory of type T (default is NodeFactory).
+    //! \tparam T Type of the factory (must inherit from NodeFactory).
+    //! \param[in] blackboard Optional blackboard to pass to the factory.
+    // ------------------------------------------------------------------------
+    template<typename T = NodeFactory>
+    static void setFactory(Blackboard::Ptr blackboard)
+    {
+        static_assert(std::is_base_of<NodeFactory, T>::value,
+                     "T must inherit from NodeFactory");
+        getFactory() = std::make_shared<T>(blackboard);
+    }
+
+    // ------------------------------------------------------------------------
+    //! \brief Create and set a factory of type T (default is NodeFactory).
+    //! \tparam T Type of the factory (must inherit from NodeFactory).
+    // ------------------------------------------------------------------------
+    template<typename T = NodeFactory>
+    static void setFactory()
+    {
+        static_assert(std::is_base_of<NodeFactory, T>::value,
+                     "T must inherit from NodeFactory");
+        getFactory() = std::make_shared<T>();
     }
 
     // ------------------------------------------------------------------------
@@ -73,8 +112,25 @@ public:
         return s_factory;
     }
 
+    // ------------------------------------------------------------------------
+    //! \brief Export the behavior tree to Mermaid format.
+    //! \param[in] tree The behavior tree to export.
+    //! \return String containing the Mermaid diagram definition.
+    // ------------------------------------------------------------------------
+    static std::string toMermaid(Tree const& tree);
+
 private:
     Node::Ptr parseYAMLNode(YAML::Node const& node);
+
+    // ------------------------------------------------------------------------
+    //! \brief Helper method to recursively generate Mermaid nodes.
+    //! \param[in] node Current node being processed.
+    //! \param[in] parent_id ID of the parent node.
+    //! \param[inout] counter Running counter for generating unique node IDs.
+    //! \param[inout] result String containing the Mermaid diagram content.
+    // ------------------------------------------------------------------------
+    static void generateMermaidNode(Node const* node, size_t parent_id,
+                                  size_t& counter, std::string& result);
 
 private:
     std::shared_ptr<NodeFactory> m_factory;

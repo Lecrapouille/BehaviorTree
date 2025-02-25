@@ -1,21 +1,21 @@
 behavior_tree:
-  type: selector
-  children:
-    - type: sequence
-      children:
-        - type: action
-          name: check_battery
-        - type: action
-          name: recharge
-    - type: sequence
-      children:
-        - type: parallel_sequence
-          success_threshold: 1
-          failure_threshold: 1
+  Selector:
+    children:
+      - Sequence:
           children:
-            - type: action
-              name: patrol
-            - type: action
-              name: detect_threat
-        - type: action
-          name: send_alert
+            - Action:
+                name: check_battery
+            - Action:
+                name: recharge
+      - Sequence:
+          children:
+            - ParallelSequence:
+                success_threshold: 1
+                failure_threshold: 1
+                children:
+                  - Action:
+                      name: patrol
+                  - Action:
+                      name: detect_threat
+            - Action:
+                name: send_alert

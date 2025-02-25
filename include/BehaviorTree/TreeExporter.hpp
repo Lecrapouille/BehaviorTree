@@ -55,8 +55,9 @@ public:
     //! \param[in] tree The behavior tree to export.
     //! \param[in] filename Path to save the YAML file.
     //! \throw std::runtime_error if file cannot be written.
+    //! \return True if file was written successfully, false otherwise.
     // ------------------------------------------------------------------------
-    static void toYAMLFile(Tree const& tree, std::string const& filename);
+    static bool toYAMLFile(Tree const& tree, std::string const& filename);
 
     // ------------------------------------------------------------------------
     //! \brief Export behavior tree to BehaviorTree.CPP XML format.
@@ -69,23 +70,24 @@ public:
     //! \brief Export behavior tree to BehaviorTree.CPP XML file.
     //! \param[in] tree The behavior tree to export.
     //! \param[in] filename Path to save the XML file.
-    //! \throw std::runtime_error if file cannot be written.
+    //! \return True if file was written successfully, false otherwise.
     // ------------------------------------------------------------------------
-    static void toBTCppXMLFile(Tree const& tree, std::string const& filename);
+    static bool toBTCppXMLFile(Tree const& tree, std::string const& filename);
 
 private:
     static YAML::Node generateYAMLNode(Node::Ptr const& node);
     static void generateBTCppXML(Node::Ptr const& node, std::stringstream& xml, int indent);
 
     template<typename T>
-    static void writeToFile(std::string const& content, std::string const& filename)
+    static bool writeToFile(std::string const& content, std::string const& filename)
     {
         std::ofstream file(filename);
         if (!file.is_open())
         {
-            throw std::runtime_error("Cannot open file for writing: " + filename);
+            return false;
         }
         file << content;
+        return true;
     }
 };
 

@@ -161,15 +161,21 @@ void runDemo()
 
     // Load the tree from the YAML file
     auto tree = builder.fromYAML("demos/security_robot/security_robot.yaml");
-    if (!tree) {
+    if (!tree)
+    {
         std::cerr << "Failed to load behavior tree from YAML\n";
         return;
     }
 
-    tree->setBlackboard(blackboard);
-
     // Initialize the connection with the visualizer
     BehaviorTreeVisualizer visualizer(*tree, "127.0.0.1", 9090);
+    int connection_attempts = 0;
+    while (!visualizer.isConnected() && connection_attempts < 3)
+    {
+        std::cout << "Waiting to connect to the visualizer application on port 9090...\n";
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        connection_attempts++;
+    }
 
     // Simulation
     std::cout << "Starting security robot demo...\n";
@@ -183,7 +189,10 @@ void runDemo()
         if (i == 10) blackboard->set<bool>("threat_detected", false);
 
         // Update the visualizer
-        visualizer.updateDebugInfo();
+        if (visualizer.isConnected())
+        {
+            visualizer.updateDebugInfo();
+        }
 
         // Tick the tree
         tree->tick();

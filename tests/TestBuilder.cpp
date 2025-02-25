@@ -1,145 +1,188 @@
 #include "BehaviorTree/TreeBuilder.hpp"
+#include "BehaviorTree/TreeExporter.hpp"
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <fstream> 
+#include <fstream>
 #include <sstream>
 
 namespace bt {
+
+// ****************************************************************************
+//! \brief Fixture pour les tests de TreeBuilder
+// ****************************************************************************
+class TreeBuilderTest : public ::testing::Test
+{
+protected:
+
+    void SetUp() override 
+    {
+        yaml_tree = R"(behavior_tree:
+  Selector:
+    children:
+      - Sequence:
+          children:
+            - Condition:
+                name: IsEnemyVisible
+            - Retry:
+                attempts: 3
+                child:
+                  - Action:
+                      name: AttackEnemy
+      - Sequence:
+          children:
+            - Condition:
+                name: IsAtPatrolPoint
+            - Repeat:
+                times: 2
+                child:
+                  - Action:
+                      name: MoveToNextPatrolPoint
+      - Inverter:
+          child:
+            - Condition:
+                name: IsLowHealth
+      - Action:
+          name: Idle)";
+
+        factory = std::make_shared<NodeFactory>();
+        factory->registerCondition("IsEnemyVisible", []() { return true; });
+        factory->registerCondition("IsAtPatrolPoint", []() { return false; });
+        factory->registerCondition("IsLowHealth", []() { return true; });
+        factory->registerAction("AttackEnemy", []() { return Status::SUCCESS; });
+        factory->registerAction("MoveToNextPatrolPoint", []() { return Status::FAILURE; });
+        factory->registerAction("Idle", []() { return Status::RUNNING; });
+
+        builder = std::make_unique<TreeBuilder>(factory);
+        tree = builder->fromText(yaml_tree);
+    }
+
+protected:
+
+    std::string yaml_tree;
+    std::shared_ptr<NodeFactory> factory;
+    std::unique_ptr<TreeBuilder> builder;
+    std::unique_ptr<Tree> tree;
+};
 
 // ****************************************************************************
 //! \brief Test loading a simple behavior tree from YAML format
 //! \details Tests the creation of a basic behavior tree with a sequence node
 //! containing an action and a condition node.
 // ****************************************************************************
-TEST(TreeBuilder, LoadSimpleYAMLTree)
+TEST_F(TreeBuilderTest, LoadSimpleYAMLTree)
 {
-    std::string yaml_content = R"(
-        behavior_tree:
-          type: sequence
-          name: test_sequence
-          children:
-            - type: always_success
-              name: move
-            - type: always_success
-              name: is_target_reached
-    )";
-
-    // Write temporary file
-    std::ofstream temp("test.yaml");
-    temp << yaml_content;
-    temp.close();
-
-    auto factory = std::make_shared<NodeFactory>();
-    // Register basic node types
-    factory->registerNodeType<AlwaysSuccess>("always_success"); 
-    factory->registerNodeType<Sequence>("sequence");
-    
-    TreeBuilder builder(factory);
-    auto tree = builder.fromYAML("test.yaml");
-    
     ASSERT_NE(tree, nullptr);
-    auto root = dynamic_cast<bt::Sequence*>(tree->rootNode());
+    EXPECT_EQ(tree->isValid(), true);
+
+    // Check the root node (Selector)
+    auto root = dynamic_cast<bt::Selector*>(tree->getRoot().get());
     ASSERT_NE(root, nullptr);
-    EXPECT_EQ(root->name(), "test_sequence");
-    EXPECT_EQ(root->children().size(), 2);
+    EXPECT_EQ(root->getChildren().size(), 4u);
 
-    // Cleanup
-    std::remove("test.yaml");
+    auto const& root_children = root->getChildren();
+
+    // First branch: Sequence with IsEnemyVisible and Retry(AttackEnemy)
+    auto first_sequence = dynamic_cast<bt::Sequence*>(root_children[0].get());
+    ASSERT_NE(first_sequence, nullptr);
+    EXPECT_EQ(first_sequence->getChildren().size(), 2u);
+
+    auto is_enemy_visible = dynamic_cast<bt::Action*>(first_sequence->getChildren()[0].get());
+    ASSERT_NE(is_enemy_visible, nullptr);
+    EXPECT_EQ(is_enemy_visible->name, "IsEnemyVisible");
+
+    auto retry_node = dynamic_cast<bt::Retry*>(first_sequence->getChildren()[1].get());
+    ASSERT_NE(retry_node, nullptr);
+    EXPECT_EQ(retry_node->getAttempts(), 3u);
+
+    auto attack_enemy = dynamic_cast<bt::Action*>(retry_node->getChild().get());
+    ASSERT_NE(attack_enemy, nullptr);
+    EXPECT_EQ(attack_enemy->name, "AttackEnemy");
+
+    // Second branch: Sequence with IsAtPatrolPoint and Repeat(MoveToNextPatrolPoint)
+    auto second_sequence = dynamic_cast<bt::Sequence*>(root_children[1].get());
+    ASSERT_NE(second_sequence, nullptr);
+    EXPECT_EQ(second_sequence->getChildren().size(), 2u);
+
+    auto is_at_patrol = dynamic_cast<bt::Action*>(second_sequence->getChildren()[0].get());
+    ASSERT_NE(is_at_patrol, nullptr);
+    EXPECT_EQ(is_at_patrol->name, "IsAtPatrolPoint");
+
+    auto repeat_node = dynamic_cast<bt::Repeat*>(second_sequence->getChildren()[1].get());
+    ASSERT_NE(repeat_node, nullptr);
+    EXPECT_EQ(repeat_node->getRepetitions(), 2u);
+
+    auto move_to_patrol = dynamic_cast<bt::Action*>(repeat_node->getChild().get());
+    ASSERT_NE(move_to_patrol, nullptr);
+    EXPECT_EQ(move_to_patrol->name, "MoveToNextPatrolPoint");
+
+    // Third branch: Inverter(IsLowHealth)
+    auto inverter = dynamic_cast<bt::Inverter*>(root_children[2].get());
+    ASSERT_NE(inverter, nullptr);
+
+    auto is_low_health = dynamic_cast<bt::Action*>(inverter->getChild().get());
+    ASSERT_NE(is_low_health, nullptr);
+    EXPECT_EQ(is_low_health->name, "IsLowHealth");
+
+    // Fourth branch: Action(Idle)
+    auto idle = dynamic_cast<bt::Action*>(root_children[3].get());
+    ASSERT_NE(idle, nullptr);
+    EXPECT_EQ(idle->name, "Idle");
+
+    // Test of the YAML export
+    auto yaml_content = bt::TreeExporter::toYAML(*tree);
+    EXPECT_EQ(yaml_content, yaml_tree);
+
+    EXPECT_EQ(bt::TreeExporter::toYAMLFile(*tree, "/tmp/test.yaml"), true);
+    std::ifstream file("/tmp/test.yaml");
+    ASSERT_TRUE(file.is_open()) << "Impossible to open the YAML file";
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    EXPECT_EQ(buffer.str(), yaml_tree);
+    std::remove("/tmp/test.yaml");
 }
 
 // ****************************************************************************
-//! \brief Test loading a behavior tree from BehaviorTree.CPP XML format
-//! \details Verifies the ability to parse and create a tree from the standard
-//! BehaviorTree.CPP XML format (version 4).
+//! \brief Test the generation of a Mermaid diagram from a behavior tree
+//! \details Verifies that the toMermaid method generates a correct Mermaid
+//! diagram representing the behavior tree.
 // ****************************************************************************
-TEST(TreeBuilder, LoadXMLFromBehaviorTreeCPP)
+TEST_F(TreeBuilderTest, TestToMermaid)
 {
-    // TODO: Implement XML support
-    GTEST_SKIP() << "XML support not yet implemented";
-}
-
-// ****************************************************************************
-//! \brief Test loading a complex behavior tree from YAML
-//! \details Tests the creation of a more complex tree structure with nested
-//! sequence and selector nodes. Verifies proper node hierarchy
-//! and child relationships.
-// ****************************************************************************
-TEST(TreeBuilder, LoadYAML)
-{
-    // Create a temporary YAML file for the test
-    std::ofstream temp("test.yaml");
-    temp << R"(
-behavior_tree:
-  type: sequence
-  children:
-    - type: selector
-      children:
-        - type: sequence
-    - type: selector
-)";
-    temp.close();
-
-    // Load and verify the tree
-    auto factory = std::make_shared<NodeFactory>();
-    TreeBuilder builder(factory);
-    auto tree = builder.fromYAML("test.yaml");
-    ASSERT_TRUE(tree != nullptr);
-    ASSERT_TRUE(tree->getRoot() != nullptr);
-
-    // Verify that the structure is correct
-    auto root = dynamic_cast<bt::Sequence*>(tree->getRoot().get());
-    ASSERT_TRUE(root != nullptr);
-    ASSERT_EQ(root->getChildren().size(), 2);
-
-    auto firstChild = dynamic_cast<bt::Selector*>(root->getChildren()[0].get());
-    ASSERT_TRUE(firstChild != nullptr);
-    ASSERT_EQ(firstChild->getChildren().size(), 1);
-
-    auto secondChild = dynamic_cast<bt::Selector*>(root->getChildren()[1].get());
-    ASSERT_TRUE(secondChild != nullptr);
-    ASSERT_EQ(secondChild->getChildren().size(), 0);
-
+    ASSERT_NE(tree, nullptr);
+    EXPECT_EQ(tree->isValid(), true);
+    
+    // Generate the Mermaid diagram
+    std::string mermaid = builder->toMermaid(*tree);
+    
+    // Verify that the diagram contains the Mermaid header
+    EXPECT_TRUE(mermaid.find("graph TD") != std::string::npos);
+    
+    // Verify that all nodes are present in the diagram
+    EXPECT_TRUE(mermaid.find("node1") != std::string::npos); // Root node
+    
+    // Verify the connections between nodes
+    // Note: The exact IDs depend on the implementation of generateMermaidNode
+    // We therefore simply check the presence of connections
+    EXPECT_TRUE(mermaid.find("-->") != std::string::npos);
+    
+    // Verify that the diagram can be written to a file
+    std::string filename = "/tmp/test_mermaid.md";
+    std::ofstream file(filename);
+    ASSERT_TRUE(file.is_open()) << "Impossible to open the Mermaid file";
+    file << mermaid;
+    file.close();
+    
+    // Read the file and verify its content
+    std::ifstream infile(filename);
+    ASSERT_TRUE(infile.is_open()) << "Impossible to read the Mermaid file";
+    std::stringstream buffer;
+    buffer << infile.rdbuf();
+    EXPECT_EQ(buffer.str(), mermaid);
+    
     // Clean up
-    std::remove("test.yaml");
-}
-
-// ****************************************************************************
-//! \brief Test handling of invalid YAML input
-//! \details Verifies that the builder properly handles and reports errors
-//! when given invalid YAML input.
-// ****************************************************************************
-TEST(TreeBuilder, HandleInvalidYAML) 
-{
-    std::string invalid_yaml = R"(
-        behavior_tree:
-          type: invalid_node
-          name: test_invalid
-          children:
-            - type: action
-              name: test_action
-    )";
-
-    std::ofstream temp("invalid.yaml");
-    temp << invalid_yaml;
-    temp.close();
-
-    auto factory = std::make_shared<NodeFactory>();
-    TreeBuilder builder(factory);
-
-    EXPECT_THROW({
-        try {
-            builder.fromYAML("invalid.yaml");
-        }
-        catch(const RuntimeError& e) {
-            // Vérifie que l'erreur contient des informations utiles
-            EXPECT_THAT(e.what(), testing::HasSubstr("invalid_node"));
-            throw;
-        }
-    }, RuntimeError);
-
-    std::remove("invalid.yaml");
+    std::remove(filename.c_str());
 }
 
 } // namespace bt

@@ -1,4 +1,85 @@
-Fenetre SFML: afficher waiting on port 8080 for BT
+Pour les nœuds de contrôle (Control Nodes) :
+Parallel → DoTogether (fait ensemble)
+Sequence → DoInOrder (fait dans l'ordre)
+Sequence with Memory → ContinueInOrder (car il mémorise l'endroit où il s'est arrêté)
+ReactiveSequence → DoInOrderWatching (fait dans l'ordre en surveillant)
+ReactiveSequence → CheckAll (car il vérifie tous les enfants à chaque tick)
+
+Fallback → TryUntilSuccess (essaie jusqu'au succès)
+Fallback with Memory → RememberAndTry (comme TryUntilSuccess mais avec mémoire)
+ReactiveFallback → TryUntilSuccessWatching (essaie jusqu'au succès en surveillant) → CheckUntilSuccess (car il cherche un succès et réessaie à chaque tick)
+Reactive Fallback → CheckUntilSuccess (car il cherche un succès et réessaie à chaque tick)
+
+Pour les décorateurs (Decorator Nodes) :
+Inverter → Not (plus simple)
+Retry → RetryOnFailure (réessaie l'enfant en cas d'échec)
+RetryUntilSuccessful → Retry (plus concis)
+TimeoutNode → WithTimeout (avec timeout)
+Timeout → LimitTime (arrête l'exécution après un certain temps)
+UntilSuccess → RepeatUntilSuccess (répète l'enfant jusqu'à succès)
+
+Pour les nœuds d'action (Action Nodes) :
+SyncActionNode → InstantAction (action instantanée)
+AsyncActionNode → LongAction (action longue) 
+CoroActionNode → BackgroundAction (car l'action se fait en arrière-plan)
+
+Pour les nœuds de condition (Condition Nodes) :
+ConditionNode → Check -> CheckCondition (vérifie une condition et retourne SUCCESS ou FAILURE)
+PreCondition → CheckBefore (vérifie avant)
+
+Pour les nœuds utilitaires :
+SubTree → Include (inclut)
+BlackboardNode → Memory (mémoire)
+Switch/Case → Choose (choisis)
+
+SyncActionNode :
+S'exécute de manière synchrone/bloquante
+Doit retourner UNIQUEMENT SUCCESS ou FAILURE
+Ne doit JAMAIS retourner RUNNING car c'est une action immédiate
+C'est pour ça qu'on l'appelle "Sync" ou "Instant"
+Utilisé pour des actions rapides qui se terminent instantanément
+La méthode principale à implémenter est tick() qui exécute l'action
+Exemple d'utilisation : vérifier une valeur, faire un calcul simple
+
+AsyncActionNode :
+Conçu pour des actions longues qui s'exécutent en arrière-plan
+Ne bloque PAS l'arbre de comportement pendant son exécution
+Utilise un système de callbacks pour signaler la fin de l'action
+Possède trois méthodes principales :
+
+onStart() : appelée quand l'action démarre
+onHalted() : appelée si l'action est interrompue
+halt() : pour arrêter proprement l'action en cours
+
+ActionNodeBase
+
+
+ReactiveSequence (DoInOrderWatching) :
+C'est comme une Sequence normale MAIS qui réévalue constamment les conditions précédentes
+Si une condition précédente devient fausse, il arrête tout et recommence depuis le début
+Très utile pour des tâches qui nécessitent que certaines conditions restent vraies pendant toute l'exécution
+
+ReactiveFallback (TryUntilSuccessWatching) :
+C'est comme un Fallback normal MAIS qui réévalue constamment la priorité des tâches
+Si une condition de plus haute priorité devient vraie, il interrompt la tâche actuelle et bascule vers la nouvelle priorité
+Utile pour gérer des priorités dynamiques
+
+La différence principale :
+ReactiveSequence : s'assure que toutes les conditions RESTENT vraies pendant l'exécution
+ReactiveFallback : change de tâche dès qu'une condition de plus haute priorité devient vraie
+
+ConditionNode (Check) :
+C'est un nœud qui vérifie une condition et retourne immédiatement SUCCESS ou FAILURE
+Ne retourne JAMAIS RUNNING
+C'est comme un test booléen : vrai (SUCCESS) ou faux (FAILURE)
+
+PreCondition (CheckBefore) :
+C'est un décorateur qui vérifie une condition AVANT d'exécuter son enfant
+Si la condition est fausse, il retourne FAILURE sans exécuter l'enfant
+Si la condition est vraie, il exécute l'enfant et retourne son statut
+Utile pour éviter d'exécuter une action si les prérequis ne sont pas remplis
+
+===========================
 
 - Ne pas utiliser yaml mais une version simplifiee ?
 
@@ -33,3 +114,16 @@ behavior_tree:
 - Integration dans une machine a etat ?
 
 - Export vers mermaid
+
+BUG ? Forcer les child() a se mettre a IDLE apres un tick() ?
+
+NodeStatus DecoratorNode::executeTick()
+{
+  NodeStatus status = TreeNode::executeTick();
+  NodeStatus child_status = child()->status();
+  if(child_status == NodeStatus::SUCCESS || child_status == NodeStatus::FAILURE)
+  {
+    child()->resetStatus();
+  }
+  return status;
+}
