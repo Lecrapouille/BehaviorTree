@@ -48,6 +48,7 @@ INCLUDES += $(P) $(P)/viewer/src $(P)/include
 PKG_LIBS += sfml-graphics
 PKG_LIBS += sfml-window
 PKG_LIBS += sfml-system
+PKG_LIBS += yaml-cpp
 
 ###################################################
 # Make the list of compiled files for the application

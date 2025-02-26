@@ -196,7 +196,12 @@ void runDemo()
 
         // Tick the tree
         tree->tick();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        
+        // Commentaire : Attendre une seconde avant le prochain tick
+        // std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::string input;
+        std::cout << "Appuyez sur Entrée pour continuer..." << std::endl;
+        std::getline(std::cin, input);
     }
 }
 

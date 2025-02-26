@@ -4,7 +4,7 @@
 int main(int argc, char* argv[])
 {
     bt::BehaviorTreeViewer viewer;
-    
+
     // Default port
     uint16_t port = 9090;
 
@@ -26,4 +26,4 @@ int main(int argc, char* argv[])
 
     std::cout << "Fin du programme" << std::endl;
     return EXIT_SUCCESS;
-} 
+}

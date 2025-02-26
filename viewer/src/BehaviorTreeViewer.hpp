@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+namespace YAML { class Node; }
+
 class NodeRenderer;
 class DebugServer;
 
@@ -41,6 +43,13 @@ private:
     void handleMessage(const std::vector<uint8_t>& data);
     void updateLayout();
     void draw();
+    
+    // ------------------------------------------------------------------------
+    //! \brief Process a YAML node and build the tree structure
+    //! \param[in] node The YAML node to process
+    //! \param[in] parent_id The ID of the parent node
+    // ------------------------------------------------------------------------
+    void processYAMLNode(const YAML::Node& node, uint32_t parent_id);
 
 private:
 

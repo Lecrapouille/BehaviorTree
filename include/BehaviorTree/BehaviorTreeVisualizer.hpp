@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BehaviorTree.hpp"
+#include "TreeExporter.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <memory>
@@ -25,8 +26,8 @@ class BehaviorTree;
 //!
 //! This class establishes a socket connection with an external visualization
 //! client. It transmits two types of information:
-//! - Tree structure (node hierarchy)
-//! - Real-time node state updates
+//! - Tree structure (node hierarchy) in YAML format
+//! - Real-time node state updates as ID-status pairs
 //!
 //! Communication is handled through a dedicated thread to avoid blocking
 //! the behavior tree execution.
@@ -43,22 +44,8 @@ public:
     // ------------------------------------------------------------------------
     enum class MessageType : uint8_t
     {
-        TREE_STRUCTURE = 1,  ///< Message containing tree structure
+        TREE_STRUCTURE = 1,  ///< Message containing tree structure in YAML
         STATE_UPDATE = 2     ///< Message containing state update
-    };
-
-    // ------------------------------------------------------------------------
-    //! \brief Structure describing a node in the tree
-    //!
-    //! Contains all necessary information to represent
-    //! a node and its relationships in the tree.
-    // ------------------------------------------------------------------------
-    struct NodeStructure
-    {
-        uint32_t id;                        ///< Unique node identifier
-        std::string name;                   ///< Node name/type
-        uint32_t parent_id;                 ///< Parent ID (-1 for root)
-        std::vector<uint32_t> children_ids; ///< List of child node IDs
     };
 
     // ------------------------------------------------------------------------
@@ -76,6 +63,8 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Constructor initializing the visualizer.
     //! \param[in] p_bt Reference to the behavior tree to visualize.
+    //! \param[in] p_ip IP address to connect to.
+    //! \param[in] p_port Port to connect to.
     //!
     //! Initializes the socket connection and starts the communication thread.
     //! The thread waits until a client connects.
@@ -118,28 +107,23 @@ private:
     void connect();
 
     // ------------------------------------------------------------------------
-    //! \brief Sends the complete tree structure to the visualizer.
+    //! \brief Sends the complete tree structure to the visualizer in YAML format.
     //!
-    //! Traverses the tree to build a representation of its structure
-    //! (nodes and their relationships) and sends it to the client. This operation
-    //! is performed only once when the client connects.
+    //! Uses TreeExporter to generate a YAML representation of the tree structure
+    //! and sends it to the client. This operation is performed only once when
+    //! the client connects.
     // ------------------------------------------------------------------------
     void sendTreeStructure();
 
     // ------------------------------------------------------------------------
-    //! \brief Builds the tree structure recursively.
+    //! \brief Assigns unique IDs to nodes in the tree using infix traversal.
     //! \param[in] p_node Current node to process
-    //! \param[out] p_nodes Vector storing the node structure
     //! \param[inout] p_next_id Next available ID for nodes
-    //! \param[in] p_parent_id Parent node ID (-1 for root)
     //!
     //! Recursively traverses the tree assigning unique IDs to each node
-    //! and building parent-child relationships.
+    //! using infix traversal order.
     // ------------------------------------------------------------------------
-    void buildTreeStructure(bt::Node::Ptr p_node,
-                            std::vector<NodeStructure>& p_nodes,
-                            uint32_t& p_next_id,
-                            uint32_t p_parent_id);
+    void assignNodeIds(bt::Node::Ptr p_node, uint32_t& p_next_id);
 
     // ------------------------------------------------------------------------
     //! \brief Captures the state of all tree nodes.

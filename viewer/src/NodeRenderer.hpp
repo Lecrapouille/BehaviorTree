@@ -12,9 +12,9 @@ public:
     static constexpr float NODE_WIDTH = 150.0f;
     static constexpr float NODE_HEIGHT = 40.0f;
     static constexpr float VERTICAL_SPACING = 60.0f;
-    static constexpr float HORIZONTAL_SPACING = 30.0f;
+    static constexpr float HORIZONTAL_SPACING = 50.0f;
 
-    void renderNode(const char* name, bt::Status status, 
+    void renderNode(const char* name, bt::Status status,
                     sf::Vector2f position, const sf::Font& font,
                     sf::RenderWindow& window);
     void drawConnection(sf::Vector2f start, sf::Vector2f end,
@@ -22,4 +22,4 @@ public:
 
 private:
     sf::Color getStatusColor(bt::Status status) const;
-}; 
+};
