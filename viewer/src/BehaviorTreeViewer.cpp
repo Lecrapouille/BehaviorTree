@@ -393,7 +393,7 @@ void BehaviorTreeViewer::draw()
             }
 
             m_renderer->renderNode(node.name.c_str(), node.status, node.position,
-                m_font, m_window);
+                                   m_font, m_window);
         }
     }
 }
@@ -745,15 +745,15 @@ uint32_t BehaviorTreeViewer::findNodeAtPosition(const sf::Vector2f& screen_pos)
 // ----------------------------------------------------------------------------
 void BehaviorTreeViewer::centerOnNode(uint32_t node_id)
 {
-    // Trouver le nœud
+    // Find the node
     auto it = m_nodes.find(node_id);
     if (it != m_nodes.end())
     {
-        // Centrer la caméra sur le nœud sans changer le niveau de zoom
+        // Center the camera on the node without changing the zoom level
         sf::Vector2f target_pos = it->second.position;
 
-        // Animation de centrage fluide
-        const float animation_duration = 0.5f; // secondes
+        // Smooth centering animation
+        const float animation_duration = 0.5f; // seconds
         const int animation_steps = 30;
 
         sf::Vector2f start_pos = m_camera.getCenter();
@@ -764,31 +764,31 @@ void BehaviorTreeViewer::centerOnNode(uint32_t node_id)
 
         while (step < animation_steps)
         {
-            // Attendre le temps nécessaire pour l'animation
+            // Wait for the necessary time for the animation
             if (animation_clock.getElapsedTime().asSeconds() >= (animation_duration / animation_steps))
             {
-                // Déplacer la caméra d'un pas
+                // Move the camera by one step
                 m_camera.move(delta);
                 m_window.setView(m_camera);
 
-                // Redessiner la scène
+                // Redraw the scene
                 m_window.clear(sf::Color::White);
                 m_window.setView(m_camera);
                 draw();
                 m_window.display();
 
-                // Réinitialiser l'horloge et incrémenter l'étape
+                // Restart the clock and increment the step
                 animation_clock.restart();
                 step++;
             }
         }
 
-        // S'assurer que la caméra est exactement centrée sur le nœud
+        // Ensure the camera is exactly centered on the node
         m_camera.setCenter(target_pos);
         m_window.setView(m_camera);
 
-        std::cout << "Centré sur le nœud: " << it->second.name
-                  << " à la position: " << it->second.position.x << ", " << it->second.position.y << std::endl;
+        std::cout << "Centered on the node: " << it->second.name
+                  << " at position: " << it->second.position.x << ", " << it->second.position.y << std::endl;
     }
 }
 
