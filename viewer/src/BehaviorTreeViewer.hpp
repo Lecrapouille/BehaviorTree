@@ -51,6 +51,19 @@ private:
     // ------------------------------------------------------------------------
     void processYAMLNode(const YAML::Node& node, uint32_t parent_id);
 
+    // ------------------------------------------------------------------------
+    //! \brief Find a node at the given screen position
+    //! \param[in] screen_pos The screen position to check
+    //! \return The ID of the node at the position, or -1 if none
+    // ------------------------------------------------------------------------
+    uint32_t findNodeAtPosition(const sf::Vector2f& screen_pos);
+
+    // ------------------------------------------------------------------------
+    //! \brief Center the view on a specific node
+    //! \param[in] node_id The ID of the node to center on
+    // ------------------------------------------------------------------------
+    void centerOnNode(uint32_t node_id);
+
 private:
 
     // ------------------------------------------------------------------------
@@ -85,10 +98,24 @@ private:
     sf::View m_camera;
     //! \brief Font for the behavior tree
     sf::Font m_font;
+    //! \brief Icon texture for the nodes
+    sf::Texture m_icon;
     //! \brief Last mouse position
     sf::Vector2f m_last_mouse_pos;
     //! \brief Whether the camera is panning
     bool m_is_panning = false;
+    //! \brief Currently selected node ID
+    uint32_t m_selected_node_id = static_cast<uint32_t>(-1);
+    //! \brief Zoom level
+    float m_zoom_level = 1.0f;
+    //! \brief Minimum zoom level
+    const float m_min_zoom = 0.1f;
+    //! \brief Maximum zoom level
+    const float m_max_zoom = 5.0f;
+    //! \brief Zoom speed factor
+    const float m_zoom_speed = 0.1f;
+    //! \brief Whether to show node selection highlight
+    bool m_show_selection = true;
 };
 
 } // namespace bt

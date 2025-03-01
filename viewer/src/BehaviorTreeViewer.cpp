@@ -12,6 +12,7 @@ BehaviorTreeViewer::BehaviorTreeViewer()
     // Initialize the camera to the center of the view
     m_camera.setCenter(0, 0);
     m_camera.setSize(1280, 720);
+    m_zoom_level = 1.0f;
 }
 
 // ----------------------------------------------------------------------------
@@ -51,6 +52,13 @@ bool BehaviorTreeViewer::initialize(uint32_t p_width, uint32_t p_height, uint16_
         return false;
     }
 
+    // Load the icon
+    if (!m_icon.loadFromFile("/home/qq/MyGitHub/MyBashProfile/avatar.png"))
+    {
+        std::cerr << "Error: Impossible to load the avatar.png file" << std::endl;
+        return false;
+    }
+
     // Create the node renderer
     m_renderer = std::make_unique<NodeRenderer>();
 
@@ -71,12 +79,33 @@ void BehaviorTreeViewer::run()
     sf::Text helpText;
     helpText.setFont(m_font);
     helpText.setString("Waiting for the behavior tree on port " +
-        std::to_string(m_port) + "...\nUse middle mouse to pan, Ctrl+wheel to zoom");
+        std::to_string(m_port) + "...\n"
+        "- Left click: select a node\n"
+        "- Double-click: center on a node\n"
+        "- Middle button or right button: move the view\n"
+        "- Mouse wheel: zoom in/out\n"
+        "- F key: zoom on the selected node\n"
+        "- Space key: reset the view");
     helpText.setCharacterSize(20);
     helpText.setFillColor(sf::Color(64, 64, 64));
     helpText.setPosition(10, 10);
 
-    // Main loop
+    // Variable to track the previous connection state
+    bool was_connected = false;
+
+    // Variables for double-click detection
+    sf::Clock click_timer;
+    bool waiting_for_double_click = false;
+    uint32_t first_click_node_id = static_cast<uint32_t>(-1);
+    const float double_click_time = 0.3f; // seconds
+
+    // Debug text for mouse position and selected node
+    sf::Text debugText;
+    debugText.setFont(m_font);
+    debugText.setCharacterSize(16);
+    debugText.setFillColor(sf::Color::Black);
+    debugText.setPosition(10, m_height - 50);
+
     while (m_window.isOpen())
     {
         // Process events
@@ -88,30 +117,120 @@ void BehaviorTreeViewer::run()
                 m_window.close();
                 return;
             }
-            else if (event.type == sf::Event::MouseWheelScrolled)
+            else if (event.type == sf::Event::MouseWheelScrolled && event.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel)
             {
-                // Zoom with Ctrl + wheel
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+                // Zoom avec la molette de la souris
+                // Facteur de zoom plus important pour une meilleure réactivité
+                const float zoom_factor = 1.1f;
+
+                // Obtenir la position de la souris avant le zoom (en coordonnées monde)
+                sf::Vector2i mouse_pixel_pos(event.mouseWheelScroll.x, event.mouseWheelScroll.y);
+                sf::Vector2f mouse_world_pos = m_window.mapPixelToCoords(mouse_pixel_pos, m_camera);
+
+                // Déterminer si on zoom in ou out
+                if (event.mouseWheelScroll.delta > 0)
                 {
-                    float zoom = (event.mouseWheelScroll.delta > 0) ? 0.9f : 1.1f;
-                    m_camera.zoom(zoom);
+                    // Zoom in - réduire la taille de la vue
+                    m_camera.zoom(1.0f / zoom_factor);
+                    m_zoom_level *= zoom_factor;
                 }
+                else
+                {
+                    // Zoom out - augmenter la taille de la vue
+                    m_camera.zoom(zoom_factor);
+                    m_zoom_level /= zoom_factor;
+                }
+
+                // Limiter le niveau de zoom
+                if (m_zoom_level < m_min_zoom)
+                {
+                    float correction = m_min_zoom / m_zoom_level;
+                    m_camera.zoom(1.0f / correction);
+                    m_zoom_level = m_min_zoom;
+                }
+                else if (m_zoom_level > m_max_zoom)
+                {
+                    float correction = m_zoom_level / m_max_zoom;
+                    m_camera.zoom(1.0f / correction);
+                    m_zoom_level = m_max_zoom;
+                }
+
+                // Appliquer la vue mise à jour
+                m_window.setView(m_camera);
+
+                // Obtenir la nouvelle position de la souris après le zoom
+                sf::Vector2f new_mouse_world_pos = m_window.mapPixelToCoords(mouse_pixel_pos, m_camera);
+
+                // Déplacer la vue pour maintenir la position de la souris fixe
+                m_camera.move(mouse_world_pos - new_mouse_world_pos);
+                m_window.setView(m_camera);
+
+                std::cout << "Zoom appliqué: " << m_zoom_level << std::endl;
             }
             else if (event.type == sf::Event::MouseButtonPressed)
             {
-                // Start panning with the middle button
-                if (event.mouseButton.button == sf::Mouse::Middle)
+                // Start panning with the middle button or right button
+                if (event.mouseButton.button == sf::Mouse::Middle ||
+                    event.mouseButton.button == sf::Mouse::Right)
                 {
                     m_is_panning = true;
                     m_last_mouse_pos = m_window.mapPixelToCoords(
-                        sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
+                        sf::Vector2i(event.mouseButton.x, event.mouseButton.y), m_camera);
+
+                    std::cout << "Start panning at: " << m_last_mouse_pos.x << ", " << m_last_mouse_pos.y << std::endl;
+                }
+                // Handle left click for node selection
+                else if (event.mouseButton.button == sf::Mouse::Left)
+                {
+                    sf::Vector2f click_pos = m_window.mapPixelToCoords(
+                        sf::Vector2i(event.mouseButton.x, event.mouseButton.y), m_camera);
+
+                    std::cout << "Left click at: " << click_pos.x << ", " << click_pos.y << std::endl;
+
+                    uint32_t clicked_node = findNodeAtPosition(click_pos);
+
+                    if (clicked_node != static_cast<uint32_t>(-1))
+                    {
+                        std::cout << "Node clicked: " << m_nodes[clicked_node].name
+                                  << " (ID: " << clicked_node << ")" << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "No node clicked" << std::endl;
+                    }
+
+                    // Check for double click
+                    if (waiting_for_double_click &&
+                        click_timer.getElapsedTime().asSeconds() < double_click_time &&
+                        clicked_node == first_click_node_id &&
+                        clicked_node != static_cast<uint32_t>(-1))
+                    {
+                        // Double click detected, center on node
+                        std::cout << "Double click detected, centering on node: " << m_nodes[clicked_node].name << std::endl;
+                        centerOnNode(clicked_node);
+                        waiting_for_double_click = false;
+                    }
+                    else
+                    {
+                        // First click, select node
+                        m_selected_node_id = clicked_node;
+
+                        // Start waiting for double click
+                        waiting_for_double_click = (clicked_node != static_cast<uint32_t>(-1));
+                        first_click_node_id = clicked_node;
+                        click_timer.restart();
+                    }
                 }
             }
             else if (event.type == sf::Event::MouseButtonReleased)
             {
                 // Stop panning
-                if (event.mouseButton.button == sf::Mouse::Middle)
+                if (event.mouseButton.button == sf::Mouse::Middle ||
+                    event.mouseButton.button == sf::Mouse::Right)
+                {
                     m_is_panning = false;
+                    std::cout << "Stop panning" << std::endl;
+                }
             }
             else if (event.type == sf::Event::MouseMoved)
             {
@@ -119,14 +238,66 @@ void BehaviorTreeViewer::run()
                 if (m_is_panning)
                 {
                     sf::Vector2f current_pos = m_window.mapPixelToCoords(
-                        sf::Vector2i(event.mouseMove.x, event.mouseMove.y));
+                        sf::Vector2i(event.mouseMove.x, event.mouseMove.y), m_camera);
                     sf::Vector2f delta = m_last_mouse_pos - current_pos;
+
                     m_camera.move(delta);
                     m_window.setView(m_camera);
-                    m_last_mouse_pos = current_pos;
+
+                    m_last_mouse_pos = m_window.mapPixelToCoords(
+                        sf::Vector2i(event.mouseMove.x, event.mouseMove.y), m_camera);
+                }
+            }
+            else if (event.type == sf::Event::KeyPressed)
+            {
+                // Reset view with space key
+                if (event.key.code == sf::Keyboard::Space)
+                {
+                    m_camera = m_window.getDefaultView();
+                    m_zoom_level = 1.0f;
+                    m_window.setView(m_camera);
+                    std::cout << "View reset" << std::endl;
+                }
+                // Centrer et zoomer sur le nœud sélectionné avec la touche 'F'
+                else if (event.key.code == sf::Keyboard::F && m_selected_node_id != static_cast<uint32_t>(-1))
+                {
+                    // Centrer sur le nœud sélectionné
+                    centerOnNode(m_selected_node_id);
+
+                    // Appliquer un zoom optimal pour voir le nœud
+                    m_zoom_level = 2.0f; // Zoom fixe pour bien voir le nœud
+
+                    // Calculer le facteur de zoom nécessaire
+                    float current_zoom = m_camera.getSize().x / m_window.getDefaultView().getSize().x;
+                    float zoom_factor = current_zoom / m_zoom_level;
+
+                    // Appliquer le zoom
+                    m_camera.zoom(zoom_factor);
+                    m_window.setView(m_camera);
+
+                    std::cout << "Zoom sur le nœud sélectionné: " << m_nodes[m_selected_node_id].name << std::endl;
                 }
             }
         }
+
+        // Check if the connection state has changed
+        bool is_connected = (m_server != nullptr) && m_server->isConnected();
+        if (was_connected && !is_connected)
+        {
+            // The client has disconnected, reset the tree data
+            std::cout << "Client disconnected, resetting tree data" << std::endl;
+            m_nodes.clear();
+            m_tree_received = false;
+
+            // Reset the camera
+            m_camera = m_window.getDefaultView();
+            m_zoom_level = 1.0f;
+            m_window.setView(m_camera);
+
+            // Reset selection
+            m_selected_node_id = static_cast<uint32_t>(-1);
+        }
+        was_connected = is_connected;
 
         // Draw the tree
         m_window.clear(sf::Color::White);
@@ -135,9 +306,35 @@ void BehaviorTreeViewer::run()
 
         // Draw the help text if necessary
         m_window.setView(m_window.getDefaultView());
-        if ((m_server == nullptr) || (!m_server->isConnected()))
+        if (!is_connected)
         {
             m_window.draw(helpText);
+        }
+
+        // Update and draw debug info
+        if (m_tree_received && is_connected)
+        {
+            // Get mouse position
+            sf::Vector2i mouse_pixel_pos = sf::Mouse::getPosition(m_window);
+            sf::Vector2f mouse_world_pos = m_window.mapPixelToCoords(mouse_pixel_pos, m_camera);
+
+            // Update debug text
+            std::string debug_info = "Mouse: (" + std::to_string(int(mouse_world_pos.x)) +
+                                    ", " + std::to_string(int(mouse_world_pos.y)) + ")";
+
+            if (m_selected_node_id != static_cast<uint32_t>(-1))
+            {
+                auto it = m_nodes.find(m_selected_node_id);
+                if (it != m_nodes.end())
+                {
+                    debug_info += " | Selected: " + it->second.name;
+                }
+            }
+
+            debug_info += " | Zoom: " + std::to_string(m_zoom_level);
+
+            debugText.setString(debug_info);
+            m_window.draw(debugText);
         }
 
         // Display the result
@@ -148,8 +345,8 @@ void BehaviorTreeViewer::run()
 // ----------------------------------------------------------------------------
 void BehaviorTreeViewer::draw()
 {
-    // Don't draw if the tree has not been received
-    if (!m_tree_received)
+    // Do not draw if the tree has not been received or if the client is not connected
+    if (!m_tree_received || (m_server && !m_server->isConnected()))
     {
         return;
     }
@@ -187,13 +384,16 @@ void BehaviorTreeViewer::draw()
         // Then draw the nodes
         for (const auto& [id, node] : m_nodes)
         {
-            m_renderer->renderNode(
-                node.name.c_str(),
-                node.status,
-                node.position,
-                m_font,
-                m_window
-            );
+            // Check if this node is selected
+            bool is_selected = (m_show_selection && id == m_selected_node_id);
+
+            if (is_selected)
+            {
+                std::cout << "Drawing selected node: " << node.name << " (ID: " << id << ")" << std::endl;
+            }
+
+            m_renderer->renderNode(node.name.c_str(), node.status, node.position,
+                m_font, m_window);
         }
     }
 }
@@ -268,17 +468,12 @@ void BehaviorTreeViewer::handleMessage(const std::vector<uint8_t>& data)
             std::cout << "=== Received State Update ===" << std::endl;
 
             // Check that the message has a minimum size
-            if (data.size() < 1 + sizeof(std::time_t) + sizeof(uint32_t)) {
+            if (data.size() < 1 + sizeof(uint32_t)) {
                 std::cerr << "State update message too short" << std::endl;
                 return;
             }
 
             size_t offset = 1;
-
-            // Read the timestamp
-            std::time_t timestamp;
-            std::memcpy(&timestamp, data.data() + offset, sizeof(std::time_t));
-            offset += sizeof(std::time_t);
 
             // Read the number of updates
             uint32_t count;
@@ -298,7 +493,7 @@ void BehaviorTreeViewer::handleMessage(const std::vector<uint8_t>& data)
                 return;
             }
 
-            std::cout << "Update of " << count << " nodes at time " << timestamp << std::endl;
+            std::cout << "Update of " << count << " nodes" << std::endl;
 
             // Read each update
             for (uint32_t i = 0; i < count; ++i)
@@ -426,7 +621,7 @@ void BehaviorTreeViewer::updateLayout()
         // Use a minimum width for short names
         float name_width = std::max(
             NodeRenderer::NODE_WIDTH,
-            float(node.name.length() * 12.0f)  // Estimation of the text width
+            float(node.name.length()) * 12.0f  // Estimation of the text width
         );
 
         // Store the node width
@@ -510,6 +705,90 @@ void BehaviorTreeViewer::updateLayout()
         m_camera.setCenter(center);
         m_camera.setSize(size);
         m_window.setView(m_camera);
+    }
+}
+
+// ----------------------------------------------------------------------------
+uint32_t BehaviorTreeViewer::findNodeAtPosition(const sf::Vector2f& screen_pos)
+{
+#if 0
+    // Vérifier chaque nœud pour voir si le point est à l'intérieur
+    // Parcourir les nœuds en ordre inverse pour sélectionner les nœuds au premier plan
+    std::vector<std::pair<uint32_t, NodeInfo*>> nodes_vec;
+
+    for (auto& [id, node] : m_nodes)
+    {
+        nodes_vec.push_back({id, &node});
+    }
+
+    // Trier les nœuds par ordre de profondeur (les enfants sont dessinés après les parents)
+    std::sort(nodes_vec.begin(), nodes_vec.end(),
+        [](const auto& a, const auto& b) {
+            return a.second->position.y > b.second->position.y;
+        });
+
+    // Vérifier chaque nœud en commençant par ceux au premier plan
+    for (const auto& [id, node_ptr] : nodes_vec)
+    {
+        if (m_renderer->isPointInNode(screen_pos, node_ptr->position, node_ptr->name))
+        {
+            std::cout << "Nœud trouvé: " << node_ptr->name << " (ID: " << id << ")" << std::endl;
+            return id;
+        }
+    }
+#endif
+
+    // Aucun nœud trouvé
+    return static_cast<uint32_t>(-1);
+}
+
+// ----------------------------------------------------------------------------
+void BehaviorTreeViewer::centerOnNode(uint32_t node_id)
+{
+    // Trouver le nœud
+    auto it = m_nodes.find(node_id);
+    if (it != m_nodes.end())
+    {
+        // Centrer la caméra sur le nœud sans changer le niveau de zoom
+        sf::Vector2f target_pos = it->second.position;
+
+        // Animation de centrage fluide
+        const float animation_duration = 0.5f; // secondes
+        const int animation_steps = 30;
+
+        sf::Vector2f start_pos = m_camera.getCenter();
+        sf::Vector2f delta = (target_pos - start_pos) / static_cast<float>(animation_steps);
+
+        sf::Clock animation_clock;
+        int step = 0;
+
+        while (step < animation_steps)
+        {
+            // Attendre le temps nécessaire pour l'animation
+            if (animation_clock.getElapsedTime().asSeconds() >= (animation_duration / animation_steps))
+            {
+                // Déplacer la caméra d'un pas
+                m_camera.move(delta);
+                m_window.setView(m_camera);
+
+                // Redessiner la scène
+                m_window.clear(sf::Color::White);
+                m_window.setView(m_camera);
+                draw();
+                m_window.display();
+
+                // Réinitialiser l'horloge et incrémenter l'étape
+                animation_clock.restart();
+                step++;
+            }
+        }
+
+        // S'assurer que la caméra est exactement centrée sur le nœud
+        m_camera.setCenter(target_pos);
+        m_window.setView(m_camera);
+
+        std::cout << "Centré sur le nœud: " << it->second.name
+                  << " à la position: " << it->second.position.x << ", " << it->second.position.y << std::endl;
     }
 }
 

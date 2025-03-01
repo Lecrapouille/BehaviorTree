@@ -1,111 +1,131 @@
 #pragma once
 
-#include <memory>
+#include <cstdint>
 #include <functional>
-#include <vector>
-#include <string>
+#include <memory>
 #include <thread>
+#include <mutex>
+#include <atomic>
+#include <vector>
 
 namespace bt {
 
 // ****************************************************************************
-//! \brief Serveur pour recevoir les données de l'arbre de comportement depuis l'application
-//! exécutant l'arbre de comportement.
+//! \brief Server to receive behavior tree data from the application
+//! executing the behavior tree.
 //!
-//! Ce serveur utilise des sockets TCP pour établir une connexion avec un client
-//! et recevoir des messages contenant des données sur la structure et l'état de l'arbre.
+//! This server uses TCP sockets to establish a connection with a client
+//! and receive messages containing data on the structure and state of the tree.
 // ****************************************************************************
 class DebugServer
 {
 public:
-    //! \brief Type de callback pour la réception de messages
+    //! \brief Type of callback for receiving messages
     using MessageCallback = std::function<void(const std::vector<uint8_t>&)>;
 
     // ------------------------------------------------------------------------
-    //! \brief Constructeur.
-    //! \param[in] p_port Port d'écoute du serveur.
-    //! \param[in] p_on_message_received Callback appelé lorsqu'un message est reçu.
+    //! \brief Constructor.
+    //! \param[in] p_port Server listening port.
+    //! \param[in] p_callback Callback called when a message is received.
     // ------------------------------------------------------------------------
-    DebugServer(uint16_t p_port, MessageCallback p_on_message_received);
+    DebugServer(uint16_t p_port, MessageCallback p_callback);
 
     // ------------------------------------------------------------------------
-    //! \brief Destructeur. Arrête automatiquement le serveur s'il est en cours d'exécution.
+    //! \brief Destructor. Stops the server automatically if it is running.
     // ------------------------------------------------------------------------
     ~DebugServer();
 
     // ------------------------------------------------------------------------
-    //! \brief Démarre le serveur et commence à écouter les connexions entrantes.
-    //! \return true si le serveur a démarré avec succès, false sinon.
+    //! \brief Start the server and begin listening for incoming connections.
+    //! \return true if the server started successfully, false otherwise.
     // ------------------------------------------------------------------------
     bool start();
 
     // ------------------------------------------------------------------------
-    //! \brief Arrête le serveur et ferme toutes les connexions.
+    //! \brief Stop the server and close all connections.
     // ------------------------------------------------------------------------
     void stop();
 
     // ------------------------------------------------------------------------
-    //! \brief Vérifie si le serveur est connecté à un client.
-    //! \return true si connecté, false sinon.
+    //! \brief Check if the server is connected to a client.
+    //! \return true if connected, false otherwise.
     // ------------------------------------------------------------------------
-    inline bool isConnected() const { return m_connected; }
+    bool isConnected() const;
 
 private:
     // ------------------------------------------------------------------------
-    //! \brief Accepte les connexions entrantes et gère la communication avec le client.
-    //! Cette méthode est exécutée dans un thread séparé.
+    //! \brief Accept incoming connections and handle communication with the client.
+    //! This method is executed in a separate thread.
     // ------------------------------------------------------------------------
     void acceptConnection();
 
     // ------------------------------------------------------------------------
-    //! \brief Lit un message depuis le socket client.
-    //! Utilise poll pour attendre des données avec un timeout.
+    //! \brief Read a message from the client socket.
+    //! Uses poll to wait for data with a timeout.
     // ------------------------------------------------------------------------
     void readMessage();
 
     // ------------------------------------------------------------------------
-    //! \brief Traite un message reçu et appelle le callback.
-    //! \param[in] bytes Nombre d'octets reçus dans le buffer.
+    //! \brief Process a received message and call the callback.
+    //! \param[in] bytes Number of bytes received in the buffer.
     // ------------------------------------------------------------------------
     void handleMessage(size_t bytes);
 
     // ------------------------------------------------------------------------
-    //! \brief Crée une paire de sockets pour la signalisation d'arrêt.
-    //! Ces sockets sont utilisés pour interrompre proprement le thread serveur.
+    //! \brief Create a pair of sockets for stopping the server.
+    //! These sockets are used to stop the server properly.
     // ------------------------------------------------------------------------
     void createSignalSocket();
 
+    // ------------------------------------------------------------------------
+    //! \brief Main thread function for the server
+    // ------------------------------------------------------------------------
+    void serverThread();
+
+    // ------------------------------------------------------------------------
+    //! \brief Process received data from the client
+    //! \param[in] p_data Received data
+    //! \param[in] p_size Size of the data
+    // ------------------------------------------------------------------------
+    void processData(const uint8_t* p_data, size_t p_size);
+
 private:
-    //! \brief Taille maximale d'un message en octets
+    //! \brief Maximum message size in bytes
     static constexpr size_t MAX_MESSAGE_SIZE = 1024 * 1024; // 1MB
 
-    //! \brief Buffer de réception pour les messages entrants
+    //! \brief Buffer for receiving incoming messages
     std::vector<uint8_t> m_receive_buffer;
 
-    //! \brief Callback appelé lorsqu'un message est reçu
+    //! \brief Callback called when a message is received
     MessageCallback m_message_callback;
 
-    //! \brief Indique si le serveur est en cours d'exécution
-    bool m_running = false;
+    //! \brief Indicate if the server is running
+    std::atomic<bool> m_running{false};
 
-    //! \brief Indique si le serveur est connecté à un client
-    bool m_connected = false;
+    //! \brief Indicate if the server is connected to a client
+    std::atomic<bool> m_connected{false};
 
-    //! \brief Port d'écoute du serveur
+    //! \brief Server listening port
     uint16_t m_port;
 
-    //! \brief Descripteur du socket serveur
+    //! \brief Server socket descriptor
     int m_server_socket = -1;
 
-    //! \brief Descripteur du socket client
+    //! \brief Client socket descriptor
     int m_client_socket = -1;
 
-    //! \brief Thread d'exécution du serveur
+    //! \brief Server execution thread
     std::thread m_server_thread;
 
-    //! \brief Descripteurs des sockets de signalisation pour l'arrêt propre
+    //! \brief Signal sockets descriptors for stopping the server
     int m_signal_send_fd = -1;
     int m_signal_recv_fd = -1;
+
+    //! \brief Mutex for protecting access to the client socket
+    std::mutex m_socket_mutex;
+
+    //! \brief Buffer for received data
+    std::vector<uint8_t> m_buffer;
 };
 
 } // namespace bt

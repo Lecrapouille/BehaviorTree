@@ -288,7 +288,9 @@ void DebugServer::handleMessage(size_t bytes)
     }
 
     // Create a copy of the received data for the callback
-    std::vector<uint8_t> message_data(m_receive_buffer.begin(), m_receive_buffer.begin() + bytes);
+    std::vector<uint8_t> message_data(
+        m_receive_buffer.begin(),
+        m_receive_buffer.begin() + static_cast<long int>(bytes));
 
     try
     {
@@ -319,6 +321,12 @@ void DebugServer::createSignalSocket()
     // Configure the sockets in non-blocking mode
     fcntl(m_signal_send_fd, F_SETFL, O_NONBLOCK);
     fcntl(m_signal_recv_fd, F_SETFL, O_NONBLOCK);
+}
+
+// ----------------------------------------------------------------------------
+bool DebugServer::isConnected() const
+{
+    return m_connected.load();
 }
 
 } // namespace bt

@@ -51,11 +51,10 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Structure for node state updates
     //!
-    //! Groups a set of node states at a given time.
+    //! Groups a set of node states.
     // ------------------------------------------------------------------------
     struct StatusUpdate
     {
-        std::chrono::system_clock::time_point timestamp; ///< Update timestamp
         std::vector<std::pair<uint32_t, bt::Status>> states; ///< Node states (ID, status)
     };
 
@@ -175,6 +174,8 @@ private:
     std::queue<StatusUpdate> m_status_queue;
     //! Mutex for the queue
     std::mutex m_queue_mutex;
+    //! Buffer for the message
+    std::vector<uint8_t> m_buffer;
 };
 
 } // namespace bt
