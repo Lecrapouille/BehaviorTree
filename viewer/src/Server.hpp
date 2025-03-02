@@ -1,3 +1,29 @@
+//*****************************************************************************
+// A C++ behavior tree lib https://github.com/Lecrapouille/BehaviorTree
+//
+// MIT License
+//
+// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//*****************************************************************************
+
 #pragma once
 
 #include <cstdint>
@@ -17,7 +43,7 @@ namespace bt {
 //! This server uses TCP sockets to establish a connection with a client
 //! and receive messages containing data on the structure and state of the tree.
 // ****************************************************************************
-class DebugServer
+class Server
 {
 public:
     //! \brief Type of callback for receiving messages
@@ -28,12 +54,12 @@ public:
     //! \param[in] p_port Server listening port.
     //! \param[in] p_callback Callback called when a message is received.
     // ------------------------------------------------------------------------
-    DebugServer(uint16_t p_port, MessageCallback p_callback);
+    Server(uint16_t p_port, MessageCallback p_callback);
 
     // ------------------------------------------------------------------------
     //! \brief Destructor. Stops the server automatically if it is running.
     // ------------------------------------------------------------------------
-    ~DebugServer();
+    ~Server();
 
     // ------------------------------------------------------------------------
     //! \brief Start the server and begin listening for incoming connections.
@@ -51,6 +77,12 @@ public:
     //! \return true if connected, false otherwise.
     // ------------------------------------------------------------------------
     bool isConnected() const;
+
+    // ------------------------------------------------------------------------
+    //! \brief Get the server listening port.
+    //! \return The server listening port.
+    // ------------------------------------------------------------------------
+    inline uint16_t getPort() const { return m_port; }
 
 private:
     // ------------------------------------------------------------------------
@@ -76,18 +108,6 @@ private:
     //! These sockets are used to stop the server properly.
     // ------------------------------------------------------------------------
     void createSignalSocket();
-
-    // ------------------------------------------------------------------------
-    //! \brief Main thread function for the server
-    // ------------------------------------------------------------------------
-    void serverThread();
-
-    // ------------------------------------------------------------------------
-    //! \brief Process received data from the client
-    //! \param[in] p_data Received data
-    //! \param[in] p_size Size of the data
-    // ------------------------------------------------------------------------
-    void processData(const uint8_t* p_data, size_t p_size);
 
 private:
     //! \brief Maximum message size in bytes

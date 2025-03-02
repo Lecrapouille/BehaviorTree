@@ -24,137 +24,134 @@
 // SOFTWARE.
 //*****************************************************************************
 
-#include <SFML/Graphics.hpp>
-
 #pragma once
+
+#include <SFML/Graphics.hpp>
 
 namespace bt {
 
 // ****************************************************************************
-//! \brief Class representing a node with rounded corners and gradient
+//! \brief Class for drawing Bezier curves and connection points
 // ****************************************************************************
-class NodeShape : public sf::Drawable, public sf::Transformable
+class ArcShape : public sf::Drawable
 {
 public:
+    // ------------------------------------------------------------------------
+    //! \brief Default constructor
+    // ------------------------------------------------------------------------
+    ArcShape();
 
     // ------------------------------------------------------------------------
-    //! \brief Default constructor.
+    //! \brief Set the start and end points of the arc
+    //! \param[in] p_start Start point
+    //! \param[in] p_end End point
     // ------------------------------------------------------------------------
-    NodeShape();
+    void setPoints(const sf::Vector2f& p_start, const sf::Vector2f& p_end);
 
     // ------------------------------------------------------------------------
-    //! \brief Set the corner radius.
-    //! \param[in] p_radius Corner radius.
+    //! \brief Set the color of the arc
+    //! \param[in] p_color Arc color
     // ------------------------------------------------------------------------
-    void setCornerRadius(float p_radius);
+    void setColor(const sf::Color& p_color);
 
     // ------------------------------------------------------------------------
-    //! \brief Set the text of the node.
-    //! \param[in] p_text Text to display.
-    //! \param[in] p_font Font to use.
-    //! \param[in] p_charSize Character size.
+    //! \brief Set the thickness of the arc
+    //! \param[in] p_thickness Arc thickness
     // ------------------------------------------------------------------------
-    void setText(const std::string& p_text, const sf::Font& p_font, unsigned int p_charSize = 24);
+    void setThickness(float p_thickness);
 
     // ------------------------------------------------------------------------
-    //! \brief Set the icon of the node.
-    //! \param[in] p_texture Icon texture.
-    //! \param[in] p_scale Icon scale.
+    //! \brief Set the number of segments for the curve
+    //! \param[in] p_num_segments Number of segments
     // ------------------------------------------------------------------------
-    void setIcon(const sf::Texture& p_texture, float p_scale = 1.0f);
+    void setSegments(size_t p_num_segments);
 
     // ------------------------------------------------------------------------
-    //! \brief Set the colors of the gradient.
-    //! \param[in] p_mainColor Main color (top).
-    //! \param[in] p_secondaryColor Secondary color (bottom).
-    //! \param[in] p_borderColor Border color.
+    //! \brief Enable or disable connection points
+    //! \param[in] p_enabled True to enable connection points
     // ------------------------------------------------------------------------
-    void setColors(const sf::Color& p_mainColor, const sf::Color& p_secondaryColor,
-                  const sf::Color& p_borderColor = sf::Color(0, 255, 255, 200));
+    void enableConnectionPoints(bool p_enabled);
 
     // ------------------------------------------------------------------------
-    //! \brief Enable or disable text smoothing.
-    //! \param[in] p_smooth True to enable text smoothing, false otherwise.
+    //! \brief Set the radius of connection points
+    //! \param[in] p_radius Radius of connection points
     // ------------------------------------------------------------------------
-    void setTextSmoothing(bool p_smooth);
+    void setConnectionPointRadius(float p_radius);
 
     // ------------------------------------------------------------------------
-    //! \brief Set the internal margins.
-    //! \param[in] p_horizontal Horizontal margin.
-    //! \param[in] p_vertical Vertical margin.
+    //! \brief Set the control point offset factor
+    //! \param[in] p_factor Control point offset factor (0.0 to 1.0)
     // ------------------------------------------------------------------------
-    void setPadding(float p_horizontal, float p_vertical);
-
-    // ------------------------------------------------------------------------
-    //! \brief Get the dimensions of the node.
-    //! \return Dimensions (width, height).
-    // ------------------------------------------------------------------------
-    sf::Vector2f getDimensions() const
-    {
-        return m_currentSize;
-    }
+    void setControlPointFactor(float p_factor);
 
 private:
     // ------------------------------------------------------------------------
-    //! \brief Draw method called by SFML.
-    //! \param[in] target Render target.
-    //! \param[in] p_states Render states.
+    //! \brief Draw method called by SFML
+    //! \param[in] p_target Render target
+    //! \param[in] p_states Render states
     // ------------------------------------------------------------------------
     void draw(sf::RenderTarget& p_target, sf::RenderStates p_states) const override;
 
     // ------------------------------------------------------------------------
-    //! \brief Update the geometry of the node.
+    //! \brief Draw the base curve
+    //! \param[in] p_target Render target
+    //! \param[in] p_states Render states
     // ------------------------------------------------------------------------
-    void updateGeometry();
+    void drawBaseCurve(sf::RenderTarget& p_target, sf::RenderStates p_states) const;
+    
+    // ------------------------------------------------------------------------
+    //! \brief Draw curve layers for thickness
+    //! \param[in] p_target Render target
+    //! \param[in] p_states Render states
+    // ------------------------------------------------------------------------
+    void drawCurveLayers(sf::RenderTarget& p_target, sf::RenderStates p_states) const;
+    
+    // ------------------------------------------------------------------------
+    //! \brief Draw connection points
+    //! \param[in] p_target Render target
+    //! \param[in] p_states Render states
+    // ------------------------------------------------------------------------
+    void drawConnectionPoints(sf::RenderTarget& p_target, sf::RenderStates p_states) const;
+    
+    // ------------------------------------------------------------------------
+    //! \brief Draw a smooth circle
+    //! \param[in] p_position Circle position
+    //! \param[in] p_radius Circle radius
+    //! \param[in] p_color Circle color
+    //! \param[in] p_target Render target
+    //! \param[in] p_states Render states
+    //! \param[in] p_withBorder With border or not
+    // ------------------------------------------------------------------------
+    void drawSmoothCircle(sf::Vector2f p_position, float p_radius, 
+                         sf::Color p_color, sf::RenderTarget& p_target,
+                         sf::RenderStates p_states, bool p_withBorder = true) const;
 
     // ------------------------------------------------------------------------
-    //! \brief Update the rounded rectangle with gradient.
+    //! \brief Calculate control points for the Bezier curve
     // ------------------------------------------------------------------------
-    void updateRoundedRectangle();
-
-    // ------------------------------------------------------------------------
-        //! \brief Update the cyan border.
-    // ------------------------------------------------------------------------
-    void updateBorder();
-
-    // ------------------------------------------------------------------------
-    //! \brief Interpolate between two colors.
-    //! \param[in] p_color1 First color.
-    //! \param[in] p_color2 Second color.
-    //! \param[in] p_factor Interpolation factor (0.0 to 1.0).
-    //! \return Interpolated color.
-    // ------------------------------------------------------------------------
-    sf::Color interpolateColor(const sf::Color& p_color1, const sf::Color& p_color2,
-                               float p_factor) const;
+    void calculateControlPoints();
 
 private:
-
-    //! \brief Text to display.
-    sf::Text m_text;
-    //! \brief Icon to display.
-    sf::Sprite m_icon;
-    //! \brief Background of the node.
-    sf::RectangleShape m_background;
-    //! \brief Gradient vertices.
-    sf::Vertex m_gradientVertices[4];
-    //! \brief Rounded rectangle.
-    sf::VertexArray m_roundedRectangle{sf::TriangleFan};
-    //! \brief Border.
-    sf::VertexArray m_border{sf::TriangleStrip};
-    //! \brief Padding.
-    sf::Vector2f m_padding{15.0f, 12.0f};
-    //! \brief Radius.
-    float m_radius{8.0f};
-    //! \brief Current size.
-    sf::Vector2f m_currentSize{100.0f, 40.0f};
-    //! \brief Main color.
-    sf::Color m_mainColor;
-    //! \brief Secondary color.
-    sf::Color m_secondaryColor;
-    //! \brief Border color.
-    sf::Color m_borderColor;
-    //! \brief Text smoothing.
-    bool m_textSmoothing{true};
+    //! \brief Start point
+    sf::Vector2f m_start;
+    //! \brief End point
+    sf::Vector2f m_end;
+    //! \brief First control point
+    sf::Vector2f m_control1;
+    //! \brief Second control point
+    sf::Vector2f m_control2;
+    //! \brief Arc color
+    sf::Color m_color;
+    //! \brief Arc thickness
+    float m_thickness;
+    //! \brief Number of segments
+    size_t m_num_segments;
+    //! \brief Enable connection points
+    bool m_connection_points_enabled;
+    //! \brief Connection point radius
+    float m_connection_point_radius;
+    //! \brief Control point offset factor
+    float m_control_point_factor;
 };
 
-} // namespace bt
+} // namespace bt 

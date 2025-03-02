@@ -1,4 +1,30 @@
-#include "DebugServer.hpp"
+//*****************************************************************************
+// A C++ behavior tree lib https://github.com/Lecrapouille/BehaviorTree
+//
+// MIT License
+//
+// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//*****************************************************************************
+
+#include "Server.hpp"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -14,7 +40,7 @@
 namespace bt {
 
 // ----------------------------------------------------------------------------
-DebugServer::DebugServer(uint16_t p_port, MessageCallback p_on_message_received)
+Server::Server(uint16_t p_port, MessageCallback p_on_message_received)
     : m_message_callback(std::move(p_on_message_received)),
       m_port(p_port)
 {
@@ -26,14 +52,13 @@ DebugServer::DebugServer(uint16_t p_port, MessageCallback p_on_message_received)
 }
 
 // ----------------------------------------------------------------------------
-DebugServer::~DebugServer()
+Server::~Server()
 {
-    // Stop the server if it is running
     stop();
 }
 
 // ----------------------------------------------------------------------------
-bool DebugServer::start()
+bool Server::start()
 {
     // Check if the server is already running
     if (m_running)
@@ -85,15 +110,15 @@ bool DebugServer::start()
     }
 
     // Start the server thread
-    std::cout << "Debug server started on port " << m_port << std::endl;
+    // std::cout << "Debug server started on port " << m_port << std::endl;
     m_running = true;
-    m_server_thread = std::thread(&DebugServer::acceptConnection, this);
+    m_server_thread = std::thread(&Server::acceptConnection, this);
 
     return true;
 }
 
 // ----------------------------------------------------------------------------
-void DebugServer::stop()
+void Server::stop()
 {
     // Check if the server is running
     if (!m_running)
@@ -150,9 +175,9 @@ void DebugServer::stop()
 }
 
 // ----------------------------------------------------------------------------
-void DebugServer::acceptConnection()
+void Server::acceptConnection()
 {
-    std::cout << "Waiting for connection on port " << m_port << "..." << std::endl;
+    std::cout << "Waiting for connection on port " << m_port << " ..." << std::endl;
 
     // Configure the file descriptors for poll
     pollfd fds[2];
@@ -226,7 +251,7 @@ void DebugServer::acceptConnection()
 }
 
 // ----------------------------------------------------------------------------
-void DebugServer::readMessage()
+void Server::readMessage()
 {
     // Configure the file descriptors for poll
     pollfd fds[2];
@@ -278,7 +303,7 @@ void DebugServer::readMessage()
 }
 
 // ----------------------------------------------------------------------------
-void DebugServer::handleMessage(size_t bytes)
+void Server::handleMessage(size_t bytes)
 {
     // Check if the callback is defined
     if (!m_message_callback)
@@ -304,7 +329,7 @@ void DebugServer::handleMessage(size_t bytes)
 }
 
 // ----------------------------------------------------------------------------
-void DebugServer::createSignalSocket()
+void Server::createSignalSocket()
 {
     // Create a pair of sockets for signaling
     int sockets[2];
@@ -324,7 +349,7 @@ void DebugServer::createSignalSocket()
 }
 
 // ----------------------------------------------------------------------------
-bool DebugServer::isConnected() const
+bool Server::isConnected() const
 {
     return m_connected.load();
 }
