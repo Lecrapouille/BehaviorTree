@@ -72,7 +72,7 @@ bool BehaviorTreeViewer::initialize(uint32_t p_width, uint32_t p_height, uint16_
 
     // Create the SFML window with anti-aliasing (4x MSAA)
     sf::ContextSettings settings;
-    settings.antialiasingLevel = 8; // High anti-aliasing level
+    //settings.antialiasingLevel = 8; // High anti-aliasing level
     m_render_context.window.create(
         sf::VideoMode(m_render_context.width, m_render_context.height),
         "Behavior Tree Viewer", sf::Style::Default, settings);
@@ -94,7 +94,8 @@ bool BehaviorTreeViewer::initialize(uint32_t p_width, uint32_t p_height, uint16_
     initializeHelpText(p_port);
 
     // Initialize the tree renderer
-    m_tree_renderer = std::make_unique<TreeRenderer>(m_render_context.window);
+    m_tree_renderer = std::make_unique<TreeRenderer>(m_render_context.window,
+        m_render_context.font, m_render_context.icons);
 
     // Initialize the debug server with a callback to process messages
     m_server = std::make_unique<Server>(p_port, [this](const std::vector<uint8_t>& data)

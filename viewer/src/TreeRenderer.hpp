@@ -48,33 +48,24 @@ class NodeShape;
 class ArcShape;
 
 // ****************************************************************************
-//! \brief Structure to store node information
-// ****************************************************************************
-struct NodeInfo
-{
-    std::string name;                  //!< Node name
-    bt::Status status;                 //!< Node status
-    sf::Vector2f position;             //!< Node position
-    uint32_t parent_id;                //!< Parent ID
-    std::vector<uint32_t> children_ids; //!< Children IDs
-};
-
-// ****************************************************************************
 //! \brief Class for rendering the behavior tree.
 // ****************************************************************************
 class TreeRenderer : public sf::Drawable
 {
 public:
     //! \brief Constant for rendering
-    static constexpr float HORIZONTAL_SPACING = 20.0f;
-    static constexpr float VERTICAL_SPACING = 40.0f;
+    static constexpr float HORIZONTAL_SPACING = 100.0f;
+    static constexpr float VERTICAL_SPACING = 120.0f;
 
     // ------------------------------------------------------------------------
-    //! \brief Constructor
-    //! \param[in] p_window Reference to the SFML window
+    //! \brief Constructor.
+    //! \param[in] p_window Reference to the SFML window.
+    //! \param[in] p_font Reference to the SFML font.
+    //! \param[in] p_icons Reference to the SFML icons.
     // ------------------------------------------------------------------------
-    explicit TreeRenderer(sf::RenderWindow& p_window)
-        : m_window(p_window)
+    explicit TreeRenderer(sf::RenderWindow& p_window, sf::Font& p_font,
+                         std::unordered_map<std::string, sf::Texture>& p_icons)
+        : m_window(p_window), m_font(p_font), m_icons(p_icons)
     {
     }
 
@@ -140,7 +131,7 @@ private:
     //! \param[in] p_position Node position.
     //! \param[in] p_target Render target.
     // ------------------------------------------------------------------------
-    void drawNodeWithShadow(NodeShape* p_nodeShape, sf::Vector2f p_position, 
+    void drawNodeWithShadow(NodeShape* p_nodeShape, sf::Vector2f p_position,
                            sf::RenderTarget& p_target) const;
 
     // ------------------------------------------------------------------------
@@ -159,21 +150,38 @@ private:
     // ------------------------------------------------------------------------
     sf::Color getStatusColor(bt::Status p_status) const;
 
+    // ------------------------------------------------------------------------
+    //! \brief Center the camera on the window.
+    //! \param[in] p_target Render target.
+    // ------------------------------------------------------------------------
+    void centerCamera(sf::RenderTarget& p_target) const;
+
 private:
+
+    // ************************************************************************
+    //! \brief Structure to store node information
+    // ************************************************************************
+    struct NodeInfo
+    {
+        uint32_t id;                       //!< Node ID
+        std::string name;                  //!< Node name
+        bt::Status status;                 //!< Node status
+        sf::Vector2f position;             //!< Node position
+        uint32_t parent_id;                //!< Parent ID
+        std::vector<uint32_t> children_ids; //!< Children IDs
+        NodeShape* shape;                  //!< Node shape
+    };
+
     //! \brief Reference to the SFML window
     sf::RenderWindow& m_window;
+    //! \brief Font
+    sf::Font& m_font;
+    //! \brief Icon collection
+    std::unordered_map<std::string, sf::Texture>& m_icons;
     //! \brief Camera view
     mutable sf::View m_camera;
     //! \brief Tree nodes
-    mutable std::unordered_map<uint32_t, NodeInfo> m_nodes;
-    //! \brief Indicates if tree has been received
-    bool m_tree_received = false;
-    //! \brief Font
-    sf::Font m_font;
-    //! \brief Icon collection
-    std::unordered_map<std::string, sf::Texture> m_icons;
-    //! \brief Node shape cache
-    mutable std::unordered_map<std::string, NodeShape*> m_nodeShapeCache;
+    mutable std::vector<NodeInfo> m_nodes;
 };
 
 } // namespace bt
