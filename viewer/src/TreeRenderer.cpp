@@ -38,13 +38,12 @@
 
 namespace bt {
 
-namespace {
 // ----------------------------------------------------------------------------
 //! \brief Count total number of nodes in a YAML tree
 //! \param[in] node YAML node to count
 //! \return Total number of nodes
 // ----------------------------------------------------------------------------
-size_t countNodesInYAML(const YAML::Node& node)
+static size_t countNodesInYAML(const YAML::Node& node)
 {
     size_t count = 0;
     for (const auto& item : node)
@@ -64,7 +63,6 @@ size_t countNodesInYAML(const YAML::Node& node)
     }
     return count;
 }
-} // anonymous namespace
 
 // ----------------------------------------------------------------------------
 void TreeRenderer::reset()
@@ -80,9 +78,6 @@ void TreeRenderer::draw(sf::RenderTarget& p_target, sf::RenderStates /*p_states*
     {
         return;
     }
-
-    // Center the camera on the window
-    centerCamera(p_target);
 
     // Find the root (node without parent)
     auto root = std::find_if(m_nodes.begin(), m_nodes.end(),
@@ -175,6 +170,9 @@ void TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
 
                 // Calculate the layout once after receiving the tree
                 calculateTreeLayout();
+
+                // Center the camera on the window
+                centerCamera(m_window);
             }
             else
             {
@@ -280,19 +278,12 @@ void TreeRenderer::processYAMLNode(const YAML::Node& node, uint32_t parent_id)
         NodeInfo& info = m_nodes[node_index];
         info.id = node_index;  // Use index as ID
         info.parent_id = parent_id;
-        info.status = bt::Status(0); // INVALID
+        info.status = bt::INVALID_STATUS;
         info.position = {0, 0};
         info.shape = nullptr;
 
         // Get the node name if available
-        if (properties["name"]) {
-            info.name = properties["name"].as<std::string>();
-        } else {
-            info.name = node_type;
-        }
-
-        std::cout << "Added node: " << info.name << " (ID: " << info.id
-                  << ", Parent: " << parent_id << ")" << std::endl;
+        info.name = properties["name"] ? properties["name"].as<std::string>() : node_type;
 
         // Process the children if they are available (for composite nodes)
         if (properties["children"])
@@ -320,186 +311,157 @@ void TreeRenderer::processYAMLNode(const YAML::Node& node, uint32_t parent_id)
 // ----------------------------------------------------------------------------
 void TreeRenderer::calculateTreeLayout()
 {
-    // If no node is present, do nothing
+    // Si aucun nœud présent, ne rien faire
     if (m_nodes.empty())
-    {
         return;
-    }
 
-    // Find the root (node without parent)
+    // Trouver la racine (nœud sans parent)
     auto root = std::find_if(m_nodes.begin(), m_nodes.end(),
         [](const NodeInfo& node) { return node.parent_id == uint32_t(-1); });
 
-    // Do nothing if no root is found
     if (root == m_nodes.end())
-    {
         return;
-    }
 
-    // Structure to store the layout information
-    struct LayoutInfo
-    {
-        uint32_t id;         // Node ID
-        float x;             // Node position x
-        float width;         // Total width of the subtree
-        float node_width;    // Width of the node
-        float node_height;   // Height of the node
+    // Structure pour stocker les informations de mise en page temporaires
+    struct TempNodeInfo {
+        float width;      //!< Largeur totale du sous-arbre
+        float height;     //!< Hauteur du sous-arbre
+        float x_offset;   //!< Position X relative
     };
+    std::vector<TempNodeInfo> temp_info(m_nodes.size());
 
-    std::vector<LayoutInfo> layout;
-    layout.reserve(m_nodes.size());  // Pre-allocate to avoid reallocation
+    // Première passe: calculer les dimensions des nœuds et la hauteur totale de l'arbre
+    std::function<float(uint32_t)> calculateSubtreeHeight;
+    calculateSubtreeHeight = [this, &temp_info, &calculateSubtreeHeight](uint32_t node_id) -> float {
+        auto& node = m_nodes[node_id];
+        auto& info = temp_info[node_id];
 
-    // Calculate the dimensions of each node based on its content
-    float maxNodeWidth = 0.0f;
-    float maxNodeHeight = 0.0f;
-
-    for (const auto& node : m_nodes)
-    {
-        // Create a temporary node shape to calculate dimensions
+        // Calculer la hauteur du nœud actuel
         NodeShape tempNode;
-        tempNode.setText(node.name.c_str(), m_font, 20);
-        tempNode.setPadding(15.0f, 12.0f);
+        tempNode.setText(node.name.c_str(), m_font, 24);
+        tempNode.setPadding(20.0f, 15.0f);
+        float node_height = tempNode.getDimensions().y;
 
-        // Get the actual dimensions from the node
-        sf::Vector2f dimensions = tempNode.getDimensions();
-
-        // Update max dimensions
-        maxNodeWidth = std::max(maxNodeWidth, dimensions.x);
-        maxNodeHeight = std::max(maxNodeHeight, dimensions.y);
-
-        // Store the node dimensions
-        LayoutInfo info;
-        info.id = node.id;
-        info.node_width = dimensions.x;
-        info.node_height = dimensions.y;
-        layout.push_back(info);
-    }
-
-    // Add extra spacing based on max node dimensions
-    float extraHorizontalSpacing = maxNodeWidth * 0.5f;
-    float extraVerticalSpacing = maxNodeHeight * 0.5f;
-
-    // First pass: calculate total width needed
-    std::function<float(uint32_t)> calculateWidth;
-    calculateWidth = [this, &layout, &calculateWidth, extraHorizontalSpacing](uint32_t node_id) -> float {
-        auto& node = m_nodes[node_id];
-        auto& info = layout[node_id];
-
-        if (node.children_ids.empty())
-        {
-            return info.node_width + extraHorizontalSpacing;
+        // Si c'est une feuille, retourner sa hauteur
+        if (node.children_ids.empty()) {
+            info.height = node_height;
+            return node_height;
         }
 
-        float children_width = 0.0f;
-        for (uint32_t child_id : node.children_ids)
-        {
-            children_width += calculateWidth(child_id) + HORIZONTAL_SPACING + extraHorizontalSpacing;
+        // Calculer la hauteur maximale des enfants
+        float max_child_height = 0.0f;
+        for (uint32_t child_id : node.children_ids) {
+            max_child_height = std::max(max_child_height, calculateSubtreeHeight(child_id));
         }
-        children_width -= (HORIZONTAL_SPACING + extraHorizontalSpacing); // Remove extra spacing after last child
 
-        return std::max(children_width, info.node_width + extraHorizontalSpacing);
+        // La hauteur totale est la hauteur du nœud plus l'espacement vertical plus la hauteur max des enfants
+        info.height = node_height + VERTICAL_SPACING + max_child_height;
+        return info.height;
     };
 
-    // Calculate total width needed
-    float totalWidth = calculateWidth(root->id);
-
-    // Recursive function to calculate the positions with infix traversal
-    std::function<LayoutInfo(uint32_t, float, float)> calculatePositions;
-    calculatePositions = [this, &layout, &calculatePositions, extraHorizontalSpacing, extraVerticalSpacing](uint32_t node_id, float x, float level) -> LayoutInfo {
-        // Find the current node
+    // Deuxième passe: calculer les largeurs des sous-arbres
+    std::function<float(uint32_t)> calculateSubtreeWidth;
+    calculateSubtreeWidth = [this, &temp_info, &calculateSubtreeWidth](uint32_t node_id) -> float {
         auto& node = m_nodes[node_id];
-        auto& info = layout[node_id];
-        info.x = x;
+        auto& info = temp_info[node_id];
 
-        if (node.children_ids.empty())
-        {
-            info.width = info.node_width + extraHorizontalSpacing;
+        // Calculer la largeur du nœud actuel
+        NodeShape tempNode;
+        tempNode.setText(node.name.c_str(), m_font, 24);
+        tempNode.setPadding(20.0f, 15.0f);
+        float node_width = tempNode.getDimensions().x;
+
+        // Si c'est une feuille, retourner sa largeur
+        if (node.children_ids.empty()) {
+            info.width = node_width + HORIZONTAL_SPACING;
+            return info.width;
         }
-        else
-        {
-            float children_width = 0.0f;
-            float child_x = x - (node.children_ids.size() * (HORIZONTAL_SPACING + extraHorizontalSpacing)) / 2.0f;
 
-            for (uint32_t child_id : node.children_ids)
-            {
-                LayoutInfo child_info = calculatePositions(child_id,
-                    child_x + children_width,
-                    level + 1);
+        // Calculer la largeur totale des enfants
+        float children_width = 0.0f;
+        for (uint32_t child_id : node.children_ids) {
+            children_width += calculateSubtreeWidth(child_id);
+        }
 
-                children_width += child_info.width + HORIZONTAL_SPACING + extraHorizontalSpacing;
+        // La largeur du sous-arbre est le max entre la largeur du nœud et celle des enfants
+        info.width = std::max(node_width, children_width);
+        return info.width;
+    };
+
+    // Calculer la hauteur totale de l'arbre
+    float total_height = calculateSubtreeHeight(root->id);
+    
+    // Calculer les largeurs
+    float total_width = calculateSubtreeWidth(root->id);
+
+    // Troisième passe: positionner les nœuds
+    std::function<void(uint32_t, float, float)> positionNodes;
+    positionNodes = [this, &temp_info, &positionNodes](uint32_t node_id, float x, float y) {
+        auto& node = m_nodes[node_id];
+        auto& info = temp_info[node_id];
+
+        // Positionner le nœud actuel
+        node.position = sf::Vector2f(x, y);
+
+        // Si le nœud a des enfants, les positionner
+        if (!node.children_ids.empty()) {
+            float total_width = 0.0f;
+            // Calculer d'abord la largeur totale des enfants
+            for (uint32_t child_id : node.children_ids) {
+                total_width += temp_info[child_id].width;
             }
 
-            children_width -= (HORIZONTAL_SPACING + extraHorizontalSpacing);
-            info.width = std::max(children_width, info.node_width + extraHorizontalSpacing);
-            info.x = x + (children_width - info.node_width) / 2.0f;
+            // Positionner chaque enfant
+            float child_x = x - total_width / 2.0f;
+            for (uint32_t child_id : node.children_ids) {
+                float child_width = temp_info[child_id].width;
+                positionNodes(child_id, child_x + child_width / 2.0f, y + VERTICAL_SPACING);
+                child_x += child_width;
+            }
         }
-
-        // Update the node's position
-        node.position = sf::Vector2f(info.x, level * (VERTICAL_SPACING + extraVerticalSpacing));
-
-        return info;
     };
 
-    // Calculate the layout from the root, starting at -totalWidth/2 to center the tree
-    calculatePositions(root->id, -totalWidth/2, 0);
+    // Positionner les nœuds en commençant par la racine, centrée verticalement
+    positionNodes(root->id, 0.0f, -total_height / 2.0f);
 
-    // After the layout calculation, adjust the camera to show the entire tree
-    if (!m_nodes.empty())
-    {
-        float minX = std::numeric_limits<float>::max();
-        float maxX = std::numeric_limits<float>::lowest();
-        float minY = std::numeric_limits<float>::max();
-        float maxY = std::numeric_limits<float>::lowest();
+    // Ajuster la vue de la caméra
+    float min_x = std::numeric_limits<float>::max();
+    float max_x = std::numeric_limits<float>::lowest();
+    float min_y = std::numeric_limits<float>::max();
+    float max_y = std::numeric_limits<float>::lowest();
 
-        // First pass: find the actual bounds of all nodes
-        for (const auto& node : m_nodes)
-        {
-            const auto& layoutInfo = layout[node.id];
-            float half_width = layoutInfo.node_width / 2.0f;
-            float half_height = layoutInfo.node_height / 2.0f;
-            minX = std::min<float>(minX, node.position.x - half_width);
-            maxX = std::max<float>(maxX, node.position.x + half_width);
-            minY = std::min<float>(minY, node.position.y - half_height);
-            maxY = std::max<float>(maxY, node.position.y + half_height);
-        }
+    // Calculer les limites de l'arbre
+    for (const auto& node : m_nodes) {
+        NodeShape tempNode;
+        tempNode.setText(node.name.c_str(), m_font, 24);
+        tempNode.setPadding(20.0f, 15.0f);
+        sf::Vector2f dim = tempNode.getDimensions();
 
-        // Add padding (10% of dimensions instead of 20%)
-        float width = maxX - minX;
-        float height = maxY - minY;
-        float paddingX = width * 0.1f;
-        float paddingY = height * 0.1f;
-        minX -= paddingX;
-        maxX += paddingX;
-        minY -= paddingY;
-        maxY += paddingY;
-
-        // Calculate the center and size of the view
-        float centerX = (minX + maxX) / 2.0f;
-        float centerY = (minY + maxY) / 2.0f;
-        width = maxX - minX;
-        height = maxY - minY;
-
-        // Get the window size and calculate the aspect ratio
-        sf::Vector2u windowSize = m_window.getSize();
-        float windowRatio = static_cast<float>(windowSize.x) / static_cast<float>(windowSize.y);
-        float treeRatio = width / height;
-
-        // Adjust the view size to match the window aspect ratio while keeping the tree visible
-        if (treeRatio > windowRatio)
-        {
-            // Tree is wider than window
-            height = width / windowRatio;
-        }
-        else
-        {
-            // Tree is taller than window
-            width = height * windowRatio;
-        }
-
-        // Set the camera view with the adjusted dimensions
-        m_camera.setCenter(centerX, centerY);
-        m_camera.setSize(width * 0.8f, height * 0.8f); // Zoom in by reducing the view size by 20%
+        min_x = std::min(min_x, node.position.x - dim.x / 2.0f);
+        max_x = std::max(max_x, node.position.x + dim.x / 2.0f);
+        min_y = std::min(min_y, node.position.y - dim.y / 2.0f);
+        max_y = std::max(max_y, node.position.y + dim.y / 2.0f);
     }
+
+    // Ajouter une marge de 10%
+    float width = max_x - min_x;
+    float height = max_y - min_y;
+    float margin_x = width * 0.1f;
+    float margin_y = height * 0.1f;
+
+    // Ajuster la vue de la caméra
+    sf::Vector2u window_size = m_window.getSize();
+    float window_ratio = static_cast<float>(window_size.x) / static_cast<float>(window_size.y);
+    float tree_ratio = width / height;
+
+    if (tree_ratio > window_ratio) {
+        height = width / window_ratio;
+    } else {
+        width = height * window_ratio;
+    }
+
+    m_camera.setCenter((min_x + max_x) / 2.0f, (min_y + max_y) / 2.0f);
+    m_camera.setSize(width + 2.0f * margin_x, height + 2.0f * margin_y);
 }
 
 // ----------------------------------------------------------------------------
@@ -615,15 +577,15 @@ void TreeRenderer::drawConnection(sf::Vector2f p_start, sf::Vector2f p_end,
     sf::Vector2f end = p_end;
 
     if (startNode) {
-        tempNodeStart.setText(startNode->name.c_str(), m_font, 20);
-        tempNodeStart.setPadding(15.0f, 12.0f);
+        tempNodeStart.setText(startNode->name.c_str(), m_font, 24);
+        tempNodeStart.setPadding(20.0f, 15.0f);
         sf::Vector2f startDim = tempNodeStart.getDimensions();
         start.y += startDim.y / 2.0f; // Bottom of parent node
     }
 
     if (endNode) {
-        tempNodeEnd.setText(endNode->name.c_str(), m_font, 20);
-        tempNodeEnd.setPadding(15.0f, 12.0f);
+        tempNodeEnd.setText(endNode->name.c_str(), m_font, 24);
+        tempNodeEnd.setPadding(20.0f, 15.0f);
         sf::Vector2f endDim = tempNodeEnd.getDimensions();
         end.y -= endDim.y / 2.0f; // Top of child node
     }
@@ -635,7 +597,7 @@ void TreeRenderer::drawConnection(sf::Vector2f p_start, sf::Vector2f p_end,
     arc.setThickness(3.0f);
     arc.setSegments(60);
     arc.enableConnectionPoints(true);
-    arc.setConnectionPointRadius(5.0f);
+    arc.setConnectionPointRadius(4.0f);
     arc.setControlPointFactor(0.5f);
 
     // Configure blend mode
