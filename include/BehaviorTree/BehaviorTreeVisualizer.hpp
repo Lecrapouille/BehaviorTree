@@ -58,6 +58,11 @@ public:
         std::vector<std::pair<uint32_t, bt::Status>> states; ///< Node states (ID, status)
     };
 
+    // ------------------------------------------------------------------------
+    //! \brief Type de map utilisée pour associer les nœuds à leurs IDs.
+    // ------------------------------------------------------------------------
+    using NodeToIdMap = std::unordered_map<bt::Node*, uint32_t>;
+
 public:
     // ------------------------------------------------------------------------
     //! \brief Constructor initializing the visualizer.
@@ -96,85 +101,114 @@ public:
     // ------------------------------------------------------------------------
     bool isConnected() const { return m_connected; }
 
+    // ------------------------------------------------------------------------
+    //! \brief Récupère l'ID associé à un nœud.
+    //! \param[in] p_node Pointeur vers le nœud.
+    //! \return ID du nœud ou 0 si le nœud n'a pas d'ID.
+    //!
+    //! Cette méthode permet d'obtenir l'ID attribué à un nœud lors du parcours de l'arbre.
+    // ------------------------------------------------------------------------
+    uint32_t getNodeId(const bt::Node* p_node) const 
+    {
+        auto it = m_node_to_id.find(const_cast<bt::Node*>(p_node));
+        return (it != m_node_to_id.end()) ? it->second : 0;
+    }
+
+    // ------------------------------------------------------------------------
+    //! \brief Récupère la map complète des IDs de nœuds.
+    //! \return Référence constante vers la map des IDs.
+    //!
+    //! Cette méthode permet d'accéder à la map associant les nœuds à leurs IDs.
+    // ------------------------------------------------------------------------
+    const NodeToIdMap& getNodeIdMap() const { return m_node_to_id; }
+
 private:
     // ------------------------------------------------------------------------
-    //! \brief Establishes connection with the visualizer.
+    //! \brief Attempts to connect to the visualizer client.
     //!
-    //! Configures and opens the socket in server mode on the defined port.
-    //! Waits for a client to connect in a blocking manner.
+    //! Creates and configures the socket connection with the client.
+    //! If successful, sends the tree structure.
     // ------------------------------------------------------------------------
     void connect();
 
     // ------------------------------------------------------------------------
-    //! \brief Sends the complete tree structure to the visualizer in YAML format.
+    //! \brief Sends the behavior tree structure to the client.
     //!
-    //! Uses TreeExporter to generate a YAML representation of the tree structure
-    //! and sends it to the client. This operation is performed only once when
-    //! the client connects.
+    //! Converts the tree structure to YAML using TreeExporter and
+    //! sends it to the connected client.
     // ------------------------------------------------------------------------
     void sendTreeStructure();
 
     // ------------------------------------------------------------------------
-    //! \brief Assigns unique IDs to nodes in the tree using infix traversal.
-    //! \param[in] p_node Current node to process
-    //! \param[inout] p_next_id Next available ID for nodes
+    //! \brief Assigns unique IDs to tree nodes.
+    //! \param[in] p_node Current node being processed.
+    //! \param[in,out] p_next_id Next available ID.
     //!
-    //! Recursively traverses the tree assigning unique IDs to each node
-    //! using infix traversal order.
+    //! Traverses the tree in a defined order (preorder) and assigns
+    //! a unique ID to each node. These IDs are used for state updates.
     // ------------------------------------------------------------------------
     void assignNodeIds(bt::Node::Ptr p_node, uint32_t& p_next_id);
 
     // ------------------------------------------------------------------------
-    //! \brief Captures the state of all tree nodes.
-    //! \param[in] p_node Current node to process
-    //! \param[out] p_update Structure receiving node states
+    //! \brief Captures states of all nodes in the tree.
+    //! \param[in] p_node Current node being processed.
+    //! \param[out] p_update Status update structure to fill.
     //!
-    //! Recursively traverses the tree and collects the execution state
-    //! (SUCCESS, FAILURE, RUNNING) of each node.
+    //! Traverses the tree and captures the current state of each node.
     // ------------------------------------------------------------------------
     void captureNodeStates(bt::Node::Ptr p_node, StatusUpdate& p_update);
 
     // ------------------------------------------------------------------------
-    //! \brief Main communication thread function.
+    //! \brief Worker thread function for asynchronous communication.
     //!
-    //! Handles client connection and state update transmission.
-    //! Runs continuously until object destruction.
+    //! This function runs in a separate thread and handles reconnection
+    //! attempts and transmission of state updates from the queue.
     // ------------------------------------------------------------------------
     void workerThread();
 
     // ------------------------------------------------------------------------
-    //! \brief Sends a state update to the visualizer.
-    //! \param[in] p_update Structure containing states to send
+    //! \brief Sends a node state update to the client.
+    //! \param[in] p_update Status update to send.
     //!
-    //! Serializes and sends node states to the client via socket.
+    //! Formats and sends a message containing state updates.
     // ------------------------------------------------------------------------
     void sendStatusUpdate(const StatusUpdate& p_update);
 
 private:
-
-    //! Behavior tree to visualize
+    //! \brief Reference to the behavior tree
     bt::Tree& m_behavior_tree;
-    //! Whether the client is connected
+
+    //! \brief Connection status
     bool m_connected = false;
-    //! Whether the worker thread is running
+
+    //! \brief Thread execution flag
     bool m_running = true;
-    //! Whether the tree structure has been sent
+
+    //! \brief Tree structure transmission flag
     bool m_tree_structure_sent = false;
-    //! Map of behavior node to its ID
-    std::unordered_map<bt::Node*, uint32_t> m_node_to_id;
-    //! Socket for the debug server
+
+    //! \brief Map associating nodes with their IDs
+    NodeToIdMap m_node_to_id;
+
+    //! \brief Network socket
     int m_socket = -1;
-    //! IP address
+
+    //! \brief Server IP address
     std::string m_ip;
-    //! Port number
+
+    //! \brief Server port
     uint16_t m_port;
-    //! Worker thread
+
+    //! \brief Communication thread
     std::thread m_worker_thread;
-    //! Queue of status updates
+
+    //! \brief Queue of state updates to send
     std::queue<StatusUpdate> m_status_queue;
-    //! Mutex for the queue
+
+    //! \brief Mutex protecting the status update queue
     std::mutex m_queue_mutex;
-    //! Buffer for the message
+
+    //! \brief Buffer for message data
     std::vector<uint8_t> m_buffer;
 };
 

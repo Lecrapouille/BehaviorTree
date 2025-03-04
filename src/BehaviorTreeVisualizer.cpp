@@ -69,8 +69,6 @@ void BehaviorTreeVisualizer::updateDebugInfo()
         std::lock_guard<std::mutex> lock(m_queue_mutex);
         m_status_queue.push(std::move(update));
     }
-
-    std::cout << "State update added to the queue (" << update.states.size() << " nodes)" << std::endl;
 }
 
 // ----------------------------------------------------------------------------
@@ -129,7 +127,7 @@ void BehaviorTreeVisualizer::sendTreeStructure()
 
     try {
         // Generate the YAML representation of the tree
-        std::string yaml_tree = TreeExporter::toYAML(m_behavior_tree);
+        std::string yaml_tree = TreeExporter::toYAML(m_behavior_tree, &m_node_to_id);
 
         // Clear the buffer
         m_buffer.clear();

@@ -848,6 +848,8 @@ while (true)
 
 You should see a real-time visualization of your behavior tree execution, showing the status of each node with color coding (green for SUCCESS, red for FAILURE, and orange for RUNNING).
 
+![BehaviorTreeViewer](docs/BehaviorTreeViewer.png)
+
 ---
 
 ## Behavior Tree API

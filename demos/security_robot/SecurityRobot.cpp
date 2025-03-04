@@ -188,14 +188,14 @@ void runDemo()
         if (i == 5) blackboard->set<int>("battery_level", 10);
         if (i == 10) blackboard->set<bool>("threat_detected", false);
 
+        // Tick the tree
+        tree->tick();
+
         // Update the visualizer
         if (visualizer.isConnected())
         {
             visualizer.updateDebugInfo();
         }
-
-        // Tick the tree
-        tree->tick();
         
         // Commentaire : Attendre une seconde avant le prochain tick
         // std::this_thread::sleep_for(std::chrono::seconds(1));

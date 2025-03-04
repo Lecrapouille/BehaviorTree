@@ -254,13 +254,10 @@ void TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
 // ----------------------------------------------------------------------------
 void TreeRenderer::processYAMLNode(const YAML::Node& node, uint32_t parent_id)
 {
-    // Use a static index to track current position in vector
-    static uint32_t current_index = 0;
-
-    // First call: reset counter and resize vector
+    // First call: reset vector and prepare to receive nodes
     if (parent_id == uint32_t(-1))
     {
-        current_index = 0;
+        m_nodes.clear();
         size_t total_nodes = countNodesInYAML(node);
         m_nodes.resize(total_nodes);
     }
@@ -271,12 +268,29 @@ void TreeRenderer::processYAMLNode(const YAML::Node& node, uint32_t parent_id)
         std::string node_type = item.first.as<std::string>();
         YAML::Node properties = item.second;
 
-        // Store current node index before processing children
-        uint32_t node_index = current_index++;
+        // Extract ID from properties - this is the important change
+        uint32_t node_id = properties["id"] ? properties["id"].as<uint32_t>() : m_nodes.size();
 
-        // Create the node information
-        NodeInfo& info = m_nodes[node_index];
-        info.id = node_index;  // Use index as ID
+        // If the node with this ID has already been processed, skip it
+        bool duplicate = false;
+        for (const auto& existing : m_nodes) {
+            if (existing.id == node_id && !existing.name.empty()) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (duplicate) {
+            continue;
+        }
+
+        // Ensure there's room in the vector
+        if (node_id >= m_nodes.size()) {
+            m_nodes.resize(node_id + 1);
+        }
+
+        // Create or update the node information
+        NodeInfo& info = m_nodes[node_id];
+        info.id = node_id;
         info.parent_id = parent_id;
         info.status = bt::INVALID_STATUS;
         info.position = {0, 0};
@@ -290,20 +304,50 @@ void TreeRenderer::processYAMLNode(const YAML::Node& node, uint32_t parent_id)
         {
             for (const auto& child : properties["children"])
             {
-                // Add this child to the parent's children list
-                info.children_ids.push_back(current_index);  // Use current_index as next child's ID
-                // Process the child node
-                processYAMLNode(child, node_index);
+                // Process the child node first to get its ID
+                processYAMLNode(child, node_id);
+                
+                // Find the processed child and add its ID to parent's children list
+                for (const auto& processed_node : m_nodes) {
+                    if (!processed_node.name.empty() && processed_node.parent_id == node_id) {
+                        // Check if this child ID is already in the list
+                        bool already_added = false;
+                        for (uint32_t existing_id : info.children_ids) {
+                            if (existing_id == processed_node.id) {
+                                already_added = true;
+                                break;
+                            }
+                        }
+                        if (!already_added) {
+                            info.children_ids.push_back(processed_node.id);
+                        }
+                    }
+                }
             }
         }
 
         // Process the unique child if it is available (for decorators)
         if (properties["child"])
         {
-            // Add this child to the parent's children list
-            info.children_ids.push_back(current_index);  // Use current_index as next child's ID
-            // Process the child node
-            processYAMLNode(properties["child"], node_index);
+            // Process the child node first
+            processYAMLNode(properties["child"], node_id);
+            
+            // Find the processed child and add its ID to parent's children list
+            for (const auto& processed_node : m_nodes) {
+                if (!processed_node.name.empty() && processed_node.parent_id == node_id) {
+                    // Check if this child ID is already in the list
+                    bool already_added = false;
+                    for (uint32_t existing_id : info.children_ids) {
+                        if (existing_id == processed_node.id) {
+                            already_added = true;
+                            break;
+                        }
+                    }
+                    if (!already_added) {
+                        info.children_ids.push_back(processed_node.id);
+                    }
+                }
+            }
         }
     }
 }
@@ -505,7 +549,7 @@ void TreeRenderer::configureNodeShape(NodeShape* p_nodeShape, const char* p_name
 
     // Set larger internal margins and enable anti-aliasing
     p_nodeShape->setPadding(20.0f, 15.0f);  // Increased padding
-    p_nodeShape->setTextSmoothing(true);
+    //p_nodeShape->setTextSmoothing(true);
 }
 
 // ----------------------------------------------------------------------------

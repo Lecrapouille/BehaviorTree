@@ -30,7 +30,7 @@
 
 namespace bt {
 
-std::string TreeExporter::toYAML(Tree const& tree)
+std::string TreeExporter::toYAML(Tree const& tree, const NodeToIdMap* node_ids)
 {
     YAML::Node root;
     
@@ -42,14 +42,14 @@ std::string TreeExporter::toYAML(Tree const& tree)
     }
 
     // Generate the root node directly
-    root["behavior_tree"] = generateYAMLNode(root_node);
+    root["behavior_tree"] = generateYAMLNode(root_node, node_ids);
     
     return YAML::Dump(root);
 }
 
-bool TreeExporter::toYAMLFile(Tree const& tree, std::string const& filename)
+bool TreeExporter::toYAMLFile(Tree const& tree, std::string const& filename, const NodeToIdMap* node_ids)
 {
-    return writeToFile<YAML::Node>(toYAML(tree), filename);
+    return writeToFile<YAML::Node>(toYAML(tree, node_ids), filename);
 }
 
 std::string TreeExporter::toBTCppXML(Tree const& tree)
@@ -73,9 +73,18 @@ bool TreeExporter::toBTCppXMLFile(Tree const& tree, std::string const& filename)
     return writeToFile<std::stringstream>(toBTCppXML(tree), filename);
 }
 
-YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
+YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node, const NodeToIdMap* node_ids)
 {
     YAML::Node yaml_node;
+    
+    // Récupérer l'ID du nœud à partir de la map passée en paramètre
+    uint32_t node_id = 0;
+    if (node_ids != nullptr) {
+        auto it = node_ids->find(node.get());
+        if (it != node_ids->end()) {
+            node_id = it->second;
+        }
+    }
 
     if (auto sequence = std::dynamic_pointer_cast<Sequence>(node))
     {
@@ -84,10 +93,12 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
         {
             content["name"] = node->name;
         }
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         YAML::Node children;
         for (auto const& child : sequence->getChildren())
         {
-            children.push_back(generateYAMLNode(child));
+            children.push_back(generateYAMLNode(child, node_ids));
         }
         content["children"] = children;
         yaml_node["Sequence"] = content;
@@ -99,10 +110,12 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
         {
             content["name"] = node->name;
         }
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         YAML::Node children;
         for (auto const& child : selector->getChildren())
         {
-            children.push_back(generateYAMLNode(child));
+            children.push_back(generateYAMLNode(child, node_ids));
         }
         content["children"] = children;
         yaml_node["Selector"] = content;
@@ -114,12 +127,14 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
         {
             content["name"] = node->name;
         }
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         content["success_threshold"] = parallel->getMinSuccess();
         content["failure_threshold"] = parallel->getMinFail();
         YAML::Node children;
         for (auto const& child : parallel->getChildren())
         {
-            children.push_back(generateYAMLNode(child));
+            children.push_back(generateYAMLNode(child, node_ids));
         }
         content["children"] = children;
         yaml_node["Parallel"] = content;
@@ -131,12 +146,14 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
         {
             content["name"] = node->name;
         }
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         content["success_on_all"] = parallel_all->getSuccessOnAll();
         content["fail_on_all"] = parallel_all->getFailOnAll();
         YAML::Node children;
         for (auto const& child : parallel_all->getChildren())
         {
-            children.push_back(generateYAMLNode(child));
+            children.push_back(generateYAMLNode(child, node_ids));
         }
         content["children"] = children;
         yaml_node["Parallel"] = content;
@@ -148,10 +165,12 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
         {
             content["name"] = node->name;
         }
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         if (inverter->getChild())
         {
             YAML::Node child_seq;
-            child_seq.push_back(generateYAMLNode(inverter->getChild()));
+            child_seq.push_back(generateYAMLNode(inverter->getChild(), node_ids));
             content["child"] = child_seq;
         }
         yaml_node["Inverter"] = content;
@@ -163,11 +182,13 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
         {
             content["name"] = node->name;
         }
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         content["attempts"] = retry->getAttempts();
         if (retry->getChild())
         {
             YAML::Node child_seq;
-            child_seq.push_back(generateYAMLNode(retry->getChild()));
+            child_seq.push_back(generateYAMLNode(retry->getChild(), node_ids));
             content["child"] = child_seq;
         }
         yaml_node["Retry"] = content;
@@ -179,11 +200,13 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
         {
             content["name"] = node->name;
         }
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         content["times"] = repeat->getRepetitions();
         if (repeat->getChild())
         {
             YAML::Node child_seq;
-            child_seq.push_back(generateYAMLNode(repeat->getChild()));
+            child_seq.push_back(generateYAMLNode(repeat->getChild(), node_ids));
             content["child"] = child_seq;
         }
         yaml_node["Repeat"] = content;
@@ -195,10 +218,12 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
         {
             content["name"] = node->name;
         }
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         if (until_success->getChild())
         {
             YAML::Node child_seq;
-            child_seq.push_back(generateYAMLNode(until_success->getChild()));
+            child_seq.push_back(generateYAMLNode(until_success->getChild(), node_ids));
             content["child"] = child_seq;
         }
         yaml_node["RepeatUntilSuccess"] = content;
@@ -210,10 +235,12 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
         {
             content["name"] = node->name;
         }
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         if (until_failure->getChild())
         {
             YAML::Node child_seq;
-            child_seq.push_back(generateYAMLNode(until_failure->getChild()));
+            child_seq.push_back(generateYAMLNode(until_failure->getChild(), node_ids));
             content["child"] = child_seq;
         }
         yaml_node["RepeatUntilFailure"] = content;
@@ -222,12 +249,16 @@ YAML::Node TreeExporter::generateYAMLNode(Node::Ptr const& node)
     {
         YAML::Node content;
         content["name"] = node->name;
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         yaml_node["Condition"] = content;
     }
     else if (auto action = std::dynamic_pointer_cast<Action>(node))
     {
         YAML::Node content;
         content["name"] = node->name;
+        // Ajouter l'ID du nœud
+        content["id"] = node_id;
         yaml_node["Action"] = content;
     }
     else
