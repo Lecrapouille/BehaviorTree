@@ -81,6 +81,13 @@ Utile pour éviter d'exécuter une action si les prérequis ne sont pas remplis
 
 ===========================
 
+- Constructor: https://lisyarus.github.io/blog/posts/behavior-trees.html
+
+```
+bt::sequence(
+            fill_task_required_resources(),
+```
+
 - Ne pas utiliser yaml mais une version simplifiee ?
 
 ```
@@ -100,20 +107,16 @@ behavior_tree:
 - Nommer les nodes => Node factory ?
 
 - Utiliser BT.cpp pour comparer le comportement attendu de ma lib
-
-- Action avec std::function pour override onRunning ?
+=> Loop KO
 
 - Refaire les TU
 
 - Ajouter plus de demos
 
-- Finir le debugger graphique (QML ?)
-
 - Multi tree ? Subtree ? namespace blackboard ?
 
 - Integration dans une machine a etat ?
 
-- Export vers mermaid
 
 BUG ? Forcer les child() a se mettre a IDLE apres un tick() ?
 
