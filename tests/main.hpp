@@ -18,10 +18,7 @@
 // along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 //=============================================================================
 
-#ifndef MAIN_HPP
-#  define MAIN_HPP
+#pragma once
 
-#  include <gmock/gmock.h>
-#  include <gtest/gtest.h>
-
-#endif // MAIN_HPP
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>

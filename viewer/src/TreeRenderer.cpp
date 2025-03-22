@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -27,17 +27,16 @@
 #include "BehaviorTree/BehaviorTreeVisualizer.hpp"
 #include "BehaviorTree/private/Serialization.hpp"
 
-
-#include "TreeRenderer.hpp"
 #include "NodeShape.hpp"
+#include "TreeRenderer.hpp"
 
 #include <yaml-cpp/yaml.h>
 
+#include <algorithm> // Pour std::min et std::max
 #include <cmath>
 #include <cstring>
 #include <iostream>
-#include <algorithm> // Pour std::min et std::max
-#include <limits>    // Pour std::numeric_limits
+#include <limits> // Pour std::numeric_limits
 
 namespace bt {
 
@@ -62,11 +61,12 @@ bool TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
         // Read the message type
         uint8_t type_value;
         deserializer >> type_value;
-        auto type = static_cast<BehaviorTreeVisualizer::MessageType>(type_value);
+        auto type =
+            static_cast<BehaviorTreeVisualizer::MessageType>(type_value);
 
         // Process according to the message type
         if (type == BehaviorTreeVisualizer::MessageType::TREE_STRUCTURE)
-        {      
+        {
             // Clear the existing nodes
             m_nodes.clear();
 
@@ -74,7 +74,7 @@ bool TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
             std::string yaml_str;
             deserializer >> yaml_str;
             YAML::Node root = YAML::Load(yaml_str);
-            
+
             // Process the root node (behavior_tree)
             if (root["behavior_tree"])
             {
@@ -86,7 +86,8 @@ bool TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
             }
             else
             {
-                std::cerr << "No behavior_tree root node found in YAML" << std::endl;
+                std::cerr << "No behavior_tree root node found in YAML"
+                          << std::endl;
                 return false;
             }
         }
@@ -110,24 +111,28 @@ bool TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
                 if (it != m_nodes.end())
                 {
                     it->second->status = status;
-                    std::cout << "Node ID " << node_id <<  " " << it->second->name
-                              << " updated with status " << bt::to_string(status) << std::endl;
+                    std::cout << "Node ID " << node_id << " "
+                              << it->second->name << " updated with status "
+                              << bt::to_string(status) << std::endl;
                 }
                 else
                 {
-                    std::cerr << "Node ID " << node_id << " not found" << std::endl;
+                    std::cerr << "Node ID " << node_id << " not found"
+                              << std::endl;
                 }
             }
         }
         else
         {
-            std::cerr << "Unknown message type: " << static_cast<int>(type) << std::endl;
+            std::cerr << "Unknown message type: " << static_cast<int>(type)
+                      << std::endl;
             return false;
         }
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Exception processing YAML tree: " << e.what() << std::endl;
+        std::cerr << "Exception processing YAML tree: " << e.what()
+                  << std::endl;
         return false;
     }
 
@@ -143,7 +148,7 @@ void TreeRenderer::createNodes(const YAML::Node& yaml_node, uint32_t& next_id)
         YAML::Node properties = item.second;
 
         // Store the node with its ID
-        uint32_t node_id = next_id++;   
+        uint32_t node_id = next_id++;
 
         // Create the node information
         m_nodes[node_id] = std::make_unique<NodeInfo>();
@@ -155,7 +160,9 @@ void TreeRenderer::createNodes(const YAML::Node& yaml_node, uint32_t& next_id)
         // Handle node name based on properties type
         if (properties.IsMap())
         {
-            node.name = properties["name"] ? properties["name"].as<std::string>() : node_type;
+            node.name = properties["name"]
+                            ? properties["name"].as<std::string>()
+                            : node_type;
         }
         else if (properties.IsScalar())
         {
@@ -176,7 +183,7 @@ void TreeRenderer::createNodes(const YAML::Node& yaml_node, uint32_t& next_id)
 
         // Process the children if they are available (for composite nodes)
         if (properties.IsMap() && properties["children"])
-        { 
+        {
             for (auto const& child : properties["children"])
             {
                 uint32_t child_id = next_id;
@@ -216,9 +223,7 @@ void TreeRenderer::calculateNodePositions()
 
     // Position the root at the center horizontally of the window
     root->position = sf::Vector2f(
-        static_cast<float>(m_window.getSize().x) / 2.0f,
-        INITIAL_Y
-    );
+        static_cast<float>(m_window.getSize().x) / 2.0f, INITIAL_Y);
 
     // Process all nodes level by level
     std::vector<NodeInfo*> currentLevel = {root};
@@ -239,7 +244,8 @@ void TreeRenderer::calculateNodePositions()
                 float levelWidth = 0.0f;
                 for (const auto& child : node->children)
                 {
-                    levelWidth += child->shape->getDimensions().x + HORIZONTAL_SPACING;
+                    levelWidth +=
+                        child->shape->getDimensions().x + HORIZONTAL_SPACING;
                 }
                 levelWidth -= HORIZONTAL_SPACING; // Remove last spacing
                 totalWidth = std::max(totalWidth, levelWidth);
@@ -255,18 +261,18 @@ void TreeRenderer::calculateNodePositions()
                 float childrenWidth = 0.0f;
                 for (const auto& child : node->children)
                 {
-                    childrenWidth += child->shape->getDimensions().x + HORIZONTAL_SPACING;
+                    childrenWidth +=
+                        child->shape->getDimensions().x + HORIZONTAL_SPACING;
                 }
                 childrenWidth -= HORIZONTAL_SPACING;
 
                 float childX = startX + (childrenWidth / 2.0f);
                 for (const auto& child : node->children)
                 {
-                    child->position = sf::Vector2f(
-                        childX,
-                        currentY + VERTICAL_SPACING
-                    );
-                    childX += child->shape->getDimensions().x + HORIZONTAL_SPACING;
+                    child->position =
+                        sf::Vector2f(childX, currentY + VERTICAL_SPACING);
+                    childX +=
+                        child->shape->getDimensions().x + HORIZONTAL_SPACING;
                     nextLevel.push_back(child);
                 }
                 startX += childrenWidth + HORIZONTAL_SPACING;
@@ -297,12 +303,12 @@ void TreeRenderer::centerCamera(sf::RenderTarget& p_target)
     {
         sf::Vector2f pos = node->position;
         sf::Vector2f dim = node->shape->getDimensions();
-        
+
         // Update bounds considering node dimensions
-        minX = std::min(minX, pos.x - dim.x/2.0f);
-        maxX = std::max(maxX, pos.x + dim.x/2.0f);
-        minY = std::min(minY, pos.y - dim.y/2.0f);
-        maxY = std::max(maxY, pos.y + dim.y/2.0f);
+        minX = std::min(minX, pos.x - dim.x / 2.0f);
+        maxX = std::max(maxX, pos.x + dim.x / 2.0f);
+        minY = std::min(minY, pos.y - dim.y / 2.0f);
+        maxY = std::max(maxY, pos.y + dim.y / 2.0f);
     }
 
     // Add padding
@@ -318,7 +324,8 @@ void TreeRenderer::centerCamera(sf::RenderTarget& p_target)
 
     // Get the window size
     sf::Vector2u windowSize = m_window.getSize();
-    float windowRatio = static_cast<float>(windowSize.x) / static_cast<float>(windowSize.y);
+    float windowRatio =
+        static_cast<float>(windowSize.x) / static_cast<float>(windowSize.y);
     float treeRatio = size.x / size.y;
 
     // Adjust the view size to fit the tree while maintaining aspect ratio
@@ -346,7 +353,8 @@ void TreeRenderer::centerCamera(sf::RenderTarget& p_target)
               << "  maxX: " << maxX << std::endl
               << "  minY: " << minY << std::endl
               << "  maxY: " << maxY << std::endl
-              << "  center: (" << center.x << ", " << center.y << ")" << std::endl
+              << "  center: (" << center.x << ", " << center.y << ")"
+              << std::endl
               << "  size: (" << size.x << ", " << size.y << ")" << std::endl;
 }
 
@@ -360,9 +368,12 @@ void TreeRenderer::debugPrintNodes() const
         std::cout << "Node ID: " << node->id << std::endl
                   << "  Name: " << node->name << std::endl
                   << "  Size: " << dim.x << "x" << dim.y << std::endl
-                  << "  Position: (" << node->position.x << ", " << node->position.y << ")" << std::endl
-                  << "  Parent: " << (node->parent ? node->parent->name : "none") 
-                  << " ID: " << (node->parent ? node->parent->id : -1) << std::endl
+                  << "  Position: (" << node->position.x << ", "
+                  << node->position.y << ")" << std::endl
+                  << "  Parent: "
+                  << (node->parent ? node->parent->name : "none")
+                  << " ID: " << (node->parent ? node->parent->id : -1)
+                  << std::endl
                   << "  Children count: " << node->children.size() << std::endl;
         if (!node->children.empty())
         {
@@ -401,7 +412,8 @@ void TreeRenderer::setNodeIcon(NodeShape* p_nodeShape, const char* p_name) const
 }
 
 // ----------------------------------------------------------------------------
-void TreeRenderer::draw(sf::RenderTarget& p_target, sf::RenderStates p_states) const
+void TreeRenderer::draw(sf::RenderTarget& p_target,
+                        sf::RenderStates p_states) const
 {
     // Draw the nodes first
     for (auto const& [id, node] : m_nodes)
@@ -420,33 +432,37 @@ void TreeRenderer::draw(sf::RenderTarget& p_target, sf::RenderStates p_states) c
 }
 
 // ----------------------------------------------------------------------------
-void TreeRenderer::drawNode(NodeInfo& p_node, sf::RenderTarget& p_target, sf::RenderStates p_states) const
+void TreeRenderer::drawNode(NodeInfo& p_node,
+                            sf::RenderTarget& p_target,
+                            sf::RenderStates p_states) const
 {
     NodeShape& shape = *(p_node.shape.get());
 
     // Define the color status with gradient
     sf::Color mainColor = getStatusColor(p_node.status);
-    sf::Color secondaryColor = sf::Color(
-        sf::Uint8(std::max(0, mainColor.r - 50)),
-        sf::Uint8(std::max(0, mainColor.g - 50)),
-        sf::Uint8(std::max(0, mainColor.b - 50)),
-        mainColor.a
-    );
+    sf::Color secondaryColor =
+        sf::Color(sf::Uint8(std::max(0, mainColor.r - 50)),
+                  sf::Uint8(std::max(0, mainColor.g - 50)),
+                  sf::Uint8(std::max(0, mainColor.b - 50)),
+                  mainColor.a);
     shape.setColors(mainColor, secondaryColor, sf::Color(0, 255, 255, 200));
 
-    // Set the position of the shape, taking into account the dimensions for centering
+    // Set the position of the shape, taking into account the dimensions for
+    // centering
     sf::Vector2f dim = shape.getDimensions();
-    shape.setPosition(p_node.position.x - dim.x/2.0f, p_node.position.y - dim.y/2.0f);
+    shape.setPosition(p_node.position.x - dim.x / 2.0f,
+                      p_node.position.y - dim.y / 2.0f);
     p_target.draw(shape, p_states);
 }
 
 // ----------------------------------------------------------------------------
-void TreeRenderer::drawConnection(sf::Vector2f p_start, sf::Vector2f p_end,
+void TreeRenderer::drawConnection(sf::Vector2f p_start,
+                                  sf::Vector2f p_end,
                                   sf::RenderTarget& p_target) const
 {
     // Find the node information for start and end points
-    auto findNodeByPosition = [this](const sf::Vector2f& pos) -> const NodeInfo*
-    {
+    auto findNodeByPosition =
+        [this](const sf::Vector2f& pos) -> const NodeInfo* {
         for (auto const& [id, node] : m_nodes)
         {
             if (node->position == pos)
@@ -469,7 +485,8 @@ void TreeRenderer::drawConnection(sf::Vector2f p_start, sf::Vector2f p_end,
     sf::Vector2f startDim = startNode->shape->getDimensions();
     sf::Vector2f endDim = endNode->shape->getDimensions();
 
-    // Calculate the connection points at the center bottom of parent and center top of child
+    // Calculate the connection points at the center bottom of parent and center
+    // top of child
     sf::Vector2f start = p_start;
     start.y += startDim.y / 2.0f; // Bottom center of parent node
 
@@ -505,7 +522,8 @@ void TreeRenderer::drawConnection(sf::Vector2f p_start, sf::Vector2f p_end,
 
     // Configure blend mode
     sf::RenderStates states;
-    states.blendMode = sf::BlendMode(sf::BlendMode::SrcAlpha, sf::BlendMode::OneMinusSrcAlpha);
+    states.blendMode =
+        sf::BlendMode(sf::BlendMode::SrcAlpha, sf::BlendMode::OneMinusSrcAlpha);
 
     // Draw the arc
     p_target.draw(arc, states);
@@ -517,13 +535,15 @@ sf::Color TreeRenderer::getStatusColor(bt::Status p_status) const
     switch (p_status)
     {
         case bt::Status::SUCCESS:
-            return sf::Color(0, 255, 0, 230);      // GREEN with slight transparency
+            return sf::Color(0, 255, 0, 230); // GREEN with slight transparency
         case bt::Status::FAILURE:
-            return sf::Color(255, 0, 0, 230);      // RED with slight transparency
+            return sf::Color(255, 0, 0, 230); // RED with slight transparency
         case bt::Status::RUNNING:
-            return sf::Color(255, 255, 0, 230);    // YELLOW with slight transparency
+            return sf::Color(
+                255, 255, 0, 230); // YELLOW with slight transparency
         default:
-            return sf::Color(211, 211, 211, 230);  // LIGHTGRAY with slight transparency
+            return sf::Color(
+                211, 211, 211, 230); // LIGHTGRAY with slight transparency
     }
 }
 

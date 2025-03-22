@@ -1,17 +1,42 @@
+//*****************************************************************************
+// A C++ behavior tree lib https://github.com/Lecrapouille/BehaviorTree
+//
+// MIT License
+//
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//*****************************************************************************
+
 #include "BehaviorTree/BehaviorTreeVisualizer.hpp"
 #include "BehaviorTree/private/Serialization.hpp"
 
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
 #include <poll.h>
+#include <unistd.h>
 
 #include <iostream>
 
-namespace bt
-{
+namespace bt {
 
 // ----------------------------------------------------------------------------
 BehaviorTreeVisualizer::BehaviorTreeVisualizer(bt::Tree const& p_bt)
@@ -46,7 +71,10 @@ void BehaviorTreeVisualizer::disconnect()
 }
 
 // ----------------------------------------------------------------------------
-std::error_code BehaviorTreeVisualizer::connect(const std::string& p_ip, uint16_t p_port, std::chrono::milliseconds p_timeout)
+std::error_code
+BehaviorTreeVisualizer::connect(const std::string& p_ip,
+                                uint16_t p_port,
+                                std::chrono::milliseconds p_timeout)
 {
     std::cout << "Connecting to the visualizer (" << p_ip << ":" << p_port
               << " with timeout " << p_timeout.count() << " ms)..."
@@ -87,7 +115,9 @@ std::error_code BehaviorTreeVisualizer::connect(const std::string& p_ip, uint16_
     while (!m_connected)
     {
         // Attempt connection
-        if (::connect(m_socket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) == 0)
+        if (::connect(m_socket,
+                      reinterpret_cast<sockaddr*>(&serverAddr),
+                      sizeof(serverAddr)) == 0)
         {
             // Assign unique IDs to nodes using an infix traversal
             uint32_t next_id = 0;
@@ -105,13 +135,13 @@ std::error_code BehaviorTreeVisualizer::connect(const std::string& p_ip, uint16_
 
             // Start the worker thread
             m_running = m_connected = true;
-            m_worker_thread = std::thread(&BehaviorTreeVisualizer::workerThread, this);
+            m_worker_thread =
+                std::thread(&BehaviorTreeVisualizer::workerThread, this);
             return std::error_code(); // Success
         }
 
         // Check if it is a connection error or a real error
-        else if ((errno == EINPROGRESS) ||
-                 (errno == EALREADY) ||
+        else if ((errno == EINPROGRESS) || (errno == EALREADY) ||
                  (errno == EINTR))
         {
             close(m_socket);
@@ -179,7 +209,8 @@ std::error_code BehaviorTreeVisualizer::sendTreeStructure()
         serializer << TreeExporter::toYAML(m_behavior_tree);
 
         // Send the message
-        ssize_t sent_bytes = send(m_socket, serializer.data(), serializer.size(), 0);
+        ssize_t sent_bytes =
+            send(m_socket, serializer.data(), serializer.size(), 0);
         if (sent_bytes <= 0)
         {
             m_tree_structure_sent = false;
@@ -197,13 +228,15 @@ std::error_code BehaviorTreeVisualizer::sendTreeStructure()
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::assignNodeIds(bt::Node const* p_node, uint32_t& p_next_id)
+void BehaviorTreeVisualizer::assignNodeIds(bt::Node const* p_node,
+                                           uint32_t& p_next_id)
 {
     assert(p_node != nullptr);
 
     // Assign an ID to the current node
     m_ids[p_node] = p_next_id;
-    std::cout << "Node ID: " << p_next_id << " Name: " << p_node->name << std::endl;
+    std::cout << "Node ID: " << p_next_id << " Name: " << p_node->name
+              << std::endl;
     p_next_id++;
 
     // Process the children first if it is a composite node
@@ -225,7 +258,8 @@ void BehaviorTreeVisualizer::assignNodeIds(bt::Node const* p_node, uint32_t& p_n
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::captureNodeStates(bt::Node const* p_node, StatusUpdate& p_update)
+void BehaviorTreeVisualizer::captureNodeStates(bt::Node const* p_node,
+                                               StatusUpdate& p_update)
 {
     // Get the ID of the node
     auto it = m_ids.find(p_node);
@@ -286,7 +320,8 @@ void BehaviorTreeVisualizer::workerThread()
 }
 
 // ----------------------------------------------------------------------------
-std::error_code BehaviorTreeVisualizer::sendStatusUpdate(const StatusUpdate& p_update)
+std::error_code
+BehaviorTreeVisualizer::sendStatusUpdate(const StatusUpdate& p_update)
 {
     // Check if the update is empty
     if (p_update.states.empty())

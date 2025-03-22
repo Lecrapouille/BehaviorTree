@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -32,7 +32,7 @@ namespace bt {
 
 //------------------------------------------------------------------------------
 Path::Path(std::string const& path, char const delimiter)
-  : m_delimiter(delimiter)
+    : m_delimiter(delimiter)
 {
     add(path);
 }
@@ -78,7 +78,7 @@ std::pair<std::string, bool> Path::find(std::string const& filename) const
     if (Path::exist(filename))
         return std::make_pair(filename, true);
 
-    for (auto const& it: m_search_paths)
+    for (auto const& it : m_search_paths)
     {
         std::string file(it + filename);
         if (Path::exist(file))
@@ -92,7 +92,7 @@ std::pair<std::string, bool> Path::find(std::string const& filename) const
 //------------------------------------------------------------------------------
 std::string Path::expand(std::string const& filename) const
 {
-    for (auto const& it: m_search_paths)
+    for (auto const& it : m_search_paths)
     {
         std::string file(it + filename);
         if (Path::exist(file))
@@ -103,13 +103,15 @@ std::string Path::expand(std::string const& filename) const
 }
 
 //------------------------------------------------------------------------------
-bool Path::open(std::string& filename, std::ifstream& ifs, std::ios_base::openmode mode) const
+bool Path::open(std::string& filename,
+                std::ifstream& ifs,
+                std::ios_base::openmode mode) const
 {
     ifs.open(filename.c_str(), mode);
     if (ifs)
         return true;
 
-    for (auto const& it: m_search_paths)
+    for (auto const& it : m_search_paths)
     {
         std::string file(it + filename);
         ifs.open(file.c_str(), mode);
@@ -125,13 +127,15 @@ bool Path::open(std::string& filename, std::ifstream& ifs, std::ios_base::openmo
 }
 
 //------------------------------------------------------------------------------
-bool Path::open(std::string& filename, std::ofstream& ofs, std::ios_base::openmode mode) const
+bool Path::open(std::string& filename,
+                std::ofstream& ofs,
+                std::ios_base::openmode mode) const
 {
     ofs.open(filename.c_str(), mode);
     if (ofs)
         return true;
 
-    for (auto const& it: m_search_paths)
+    for (auto const& it : m_search_paths)
     {
         std::string file(it + filename);
         ofs.open(file.c_str(), mode);
@@ -147,13 +151,15 @@ bool Path::open(std::string& filename, std::ofstream& ofs, std::ios_base::openmo
 }
 
 //------------------------------------------------------------------------------
-bool Path::open(std::string& filename, std::fstream& fs, std::ios_base::openmode mode) const
+bool Path::open(std::string& filename,
+                std::fstream& fs,
+                std::ios_base::openmode mode) const
 {
     fs.open(filename.c_str(), mode);
     if (fs)
         return true;
 
-    for (auto const& it: m_search_paths)
+    for (auto const& it : m_search_paths)
     {
         std::string file(it + filename);
         fs.open(filename.c_str(), mode);
@@ -173,7 +179,7 @@ std::vector<std::string> Path::pathes() const
 {
     std::vector<std::string> res;
     res.reserve(m_search_paths.size());
-    for (auto const& it: m_search_paths)
+    for (auto const& it : m_search_paths)
     {
         res.push_back(it);
     }
@@ -189,7 +195,7 @@ std::string Path::toString() const
     string_path += ".";
     string_path += m_delimiter;
 
-    for (auto const& it: m_search_paths)
+    for (auto const& it : m_search_paths)
     {
         string_path += it;
         string_path.pop_back(); // Remove the '/' char
@@ -208,7 +214,7 @@ void Path::split(std::string const& path)
     while (std::getline(ss, directory, m_delimiter))
     {
         if (directory.empty())
-            continue ;
+            continue;
 
         if ((*directory.rbegin() == '\\') || (*directory.rbegin() == '/'))
             m_search_paths.push_back(directory);

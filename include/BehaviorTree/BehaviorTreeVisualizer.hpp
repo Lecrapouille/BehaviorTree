@@ -1,20 +1,46 @@
+//*****************************************************************************
+// A C++ behavior tree lib https://github.com/Lecrapouille/BehaviorTree
+//
+// MIT License
+//
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//*****************************************************************************
+
 #pragma once
 
 #include "BehaviorTree/BehaviorTree.hpp"
 #include "BehaviorTree/TreeExporter.hpp"
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <memory>
-#include <thread>
-#include <mutex>
-#include <queue>
-#include <unordered_map>
-#include <string>
-#include <vector>
-#include <cstdint>
 #include <chrono>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <netinet/in.h>
+#include <queue>
+#include <string>
+#include <sys/socket.h>
 #include <system_error>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
 namespace bt {
 
@@ -38,11 +64,15 @@ enum class visualizer_errc
 // ****************************************************************************
 //! \brief Error category for BehaviorTreeVisualizer errors
 // ****************************************************************************
-class visualizer_error_category : public std::error_category
+class visualizer_error_category: public std::error_category
 {
 public:
+
     //! \brief Get the name of the error category
-    const char* name() const noexcept override { return "behavior_tree_visualizer"; }
+    const char* name() const noexcept override
+    {
+        return "behavior_tree_visualizer";
+    }
 
     //! \brief Get the error message for a given error code
     std::string message(int ev) const override
@@ -103,6 +133,7 @@ inline std::error_code make_error_code(visualizer_errc e) noexcept
 class BehaviorTreeVisualizer
 {
 public:
+
     // ------------------------------------------------------------------------
     //! \brief Message types for communication protocol
     //!
@@ -111,8 +142,8 @@ public:
     // ------------------------------------------------------------------------
     enum class MessageType : uint8_t
     {
-        TREE_STRUCTURE = 1,  ///< Message containing tree structure in YAML
-        STATE_UPDATE = 2     ///< Message containing state update
+        TREE_STRUCTURE = 1, ///< Message containing tree structure in YAML
+        STATE_UPDATE = 2    ///< Message containing state update
     };
 
     // ------------------------------------------------------------------------
@@ -122,10 +153,12 @@ public:
     // ------------------------------------------------------------------------
     struct StatusUpdate
     {
-        std::vector<std::pair<uint32_t, bt::Status>> states; ///< Node states (ID, status)
+        std::vector<std::pair<uint32_t, bt::Status>>
+            states; ///< Node states (ID, status)
     };
 
 public:
+
     // ------------------------------------------------------------------------
     //! \brief Constructor initializing the visualizer.
     //! \param[in] p_tree Reference to the behavior tree to visualize.
@@ -148,9 +181,12 @@ public:
     //! \param[in] p_ip IP address to connect to.
     //! \param[in] p_port Port to connect to.
     //! \param[in] p_timeout Connection timeout in milliseconds.
-    //! \return std::error_code indicating success or the specific error that occurred.
+    //! \return std::error_code indicating success or the specific error that
+    //! occurred.
     // ------------------------------------------------------------------------
-    std::error_code connect(const std::string& p_ip, uint16_t p_port, std::chrono::milliseconds p_timeout);
+    std::error_code connect(const std::string& p_ip,
+                            uint16_t p_port,
+                            std::chrono::milliseconds p_timeout);
 
     // ------------------------------------------------------------------------
     //! \brief Updates debug information to be sent to the visualizer.
@@ -164,7 +200,8 @@ public:
     bool tick();
 
     // ------------------------------------------------------------------------
-    //! \brief Disconnects from the visualizer and stops the communication thread.
+    //! \brief Disconnects from the visualizer and stops the communication
+    //! thread.
     // ------------------------------------------------------------------------
     void disconnect();
 
@@ -175,13 +212,17 @@ public:
     //! Used to determine if debug information will actually be
     //! transmitted to a client.
     // ------------------------------------------------------------------------
-    bool isConnected() const { return m_connected; }
+    bool isConnected() const
+    {
+        return m_connected;
+    }
 
 private:
 
     // ------------------------------------------------------------------------
     //! \brief Sends the behavior tree structure to the client.
-    //! \return std::error_code indicating success or the specific error that occurred.
+    //! \return std::error_code indicating success or the specific error that
+    //! occurred.
     //!
     //! Converts the tree structure to YAML using TreeExporter and
     //! sends it to the connected client.
@@ -199,9 +240,9 @@ private:
     void assignNodeIds(bt::Node const* p_node, uint32_t& p_next_id);
 
     // ------------------------------------------------------------------------
-    //! \brief Captures states of all nodes in the tree using an infix traversal.
-    //! \param[in] p_node Current node being processed.
-    //! \param[out] p_update Status update structure to fill.
+    //! \brief Captures states of all nodes in the tree using an infix
+    //! traversal. \param[in] p_node Current node being processed. \param[out]
+    //! p_update Status update structure to fill.
     //!
     //! Traverses the tree and captures the current state of each node.
     // ------------------------------------------------------------------------
@@ -218,13 +259,15 @@ private:
     // ------------------------------------------------------------------------
     //! \brief Sends a node state update to the client.
     //! \param[in] p_update Status update to send.
-    //! \return std::error_code indicating success or the specific error that occurred.
+    //! \return std::error_code indicating success or the specific error that
+    //! occurred.
     //!
     //! Formats and sends a message containing state updates.
     // ------------------------------------------------------------------------
     std::error_code sendStatusUpdate(const StatusUpdate& p_update);
 
 private:
+
     //! \brief Reference to the behavior tree
     bt::Tree const& m_behavior_tree;
 

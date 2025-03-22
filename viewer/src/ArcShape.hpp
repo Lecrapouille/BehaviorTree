@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -33,9 +33,10 @@ namespace bt {
 // ****************************************************************************
 //! \brief Class for drawing Bezier curves and connection points
 // ****************************************************************************
-class ArcShape : public sf::Drawable
+class ArcShape: public sf::Drawable
 {
 public:
+
     // ------------------------------------------------------------------------
     //! \brief Default constructor
     // ------------------------------------------------------------------------
@@ -85,34 +86,39 @@ public:
     void setControlPointFactor(float p_factor);
 
 private:
+
     // ------------------------------------------------------------------------
     //! \brief Draw method called by SFML
     //! \param[in] p_target Render target
     //! \param[in] p_states Render states
     // ------------------------------------------------------------------------
-    void draw(sf::RenderTarget& p_target, sf::RenderStates p_states) const override;
+    void draw(sf::RenderTarget& p_target,
+              sf::RenderStates p_states) const override;
 
     // ------------------------------------------------------------------------
     //! \brief Draw the base curve
     //! \param[in] p_target Render target
     //! \param[in] p_states Render states
     // ------------------------------------------------------------------------
-    void drawBaseCurve(sf::RenderTarget& p_target, sf::RenderStates p_states) const;
-    
+    void drawBaseCurve(sf::RenderTarget& p_target,
+                       sf::RenderStates p_states) const;
+
     // ------------------------------------------------------------------------
     //! \brief Draw curve layers for thickness
     //! \param[in] p_target Render target
     //! \param[in] p_states Render states
     // ------------------------------------------------------------------------
-    void drawCurveLayers(sf::RenderTarget& p_target, sf::RenderStates p_states) const;
-    
+    void drawCurveLayers(sf::RenderTarget& p_target,
+                         sf::RenderStates p_states) const;
+
     // ------------------------------------------------------------------------
     //! \brief Draw connection points
     //! \param[in] p_target Render target
     //! \param[in] p_states Render states
     // ------------------------------------------------------------------------
-    void drawConnectionPoints(sf::RenderTarget& p_target, sf::RenderStates p_states) const;
-    
+    void drawConnectionPoints(sf::RenderTarget& p_target,
+                              sf::RenderStates p_states) const;
+
     // ------------------------------------------------------------------------
     //! \brief Draw a smooth circle
     //! \param[in] p_position Circle position
@@ -122,9 +128,12 @@ private:
     //! \param[in] p_states Render states
     //! \param[in] p_withBorder With border or not
     // ------------------------------------------------------------------------
-    void drawSmoothCircle(sf::Vector2f p_position, float p_radius, 
-                         sf::Color p_color, sf::RenderTarget& p_target,
-                         sf::RenderStates p_states, bool p_withBorder = true) const;
+    void drawSmoothCircle(sf::Vector2f p_position,
+                          float p_radius,
+                          sf::Color p_color,
+                          sf::RenderTarget& p_target,
+                          sf::RenderStates p_states,
+                          bool p_withBorder = true) const;
 
     // ------------------------------------------------------------------------
     //! \brief Calculate control points for the Bezier curve
@@ -132,6 +141,7 @@ private:
     void calculateControlPoints();
 
 private:
+
     //! \brief Start point
     sf::Vector2f m_start;
     //! \brief End point
@@ -154,4 +164,4 @@ private:
     float m_control_point_factor;
 };
 
-} // namespace bt 
+} // namespace bt

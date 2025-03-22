@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -28,7 +28,9 @@
 
 #include "BehaviorTree/BehaviorTree.hpp"
 
-namespace YAML { class Node; }
+namespace YAML {
+class Node;
+}
 
 namespace bt {
 
@@ -44,17 +46,21 @@ public:
     //! \param[in] p_file_path Path to the YAML file.
     //! \return Unique pointer to the created behavior tree.
     // ------------------------------------------------------------------------
-    static std::unique_ptr<Tree> fromFile(NodeFactory const& p_factory, std::string const& p_file_path);
+    static std::unique_ptr<Tree> fromFile(NodeFactory const& p_factory,
+                                          std::string const& p_file_path);
 
     // ------------------------------------------------------------------------
     //! \brief Create a behavior tree from YAML text string.
     //! \param[in] p_yaml_text String containing the YAML definition.
     //! \return Unique pointer to the created behavior tree.
     // ------------------------------------------------------------------------
-    static std::unique_ptr<Tree> fromText(NodeFactory const& p_factory, std::string const& p_yaml_text);
+    static std::unique_ptr<Tree> fromText(NodeFactory const& p_factory,
+                                          std::string const& p_yaml_text);
 
 private:
-    static Node::Ptr parseYAMLNode(NodeFactory const& p_factory, YAML::Node const& node);
+
+    static Node::Ptr parseYAMLNode(NodeFactory const& p_factory,
+                                   YAML::Node const& node);
 };
 
 } // namespace bt

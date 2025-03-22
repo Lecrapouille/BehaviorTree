@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -26,12 +26,12 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <thread>
 #include <mutex>
-#include <atomic>
+#include <thread>
 #include <vector>
 
 namespace bt {
@@ -46,6 +46,7 @@ namespace bt {
 class Server
 {
 public:
+
     //! \brief Type of callback for receiving messages
     using MessageCallback = std::function<void(const std::vector<uint8_t>&)>;
 
@@ -82,12 +83,16 @@ public:
     //! \brief Get the server listening port.
     //! \return The server listening port.
     // ------------------------------------------------------------------------
-    inline uint16_t getPort() const { return m_port; }
+    inline uint16_t getPort() const
+    {
+        return m_port;
+    }
 
 private:
+
     // ------------------------------------------------------------------------
-    //! \brief Accept incoming connections and handle communication with the client.
-    //! This method is executed in a separate thread.
+    //! \brief Accept incoming connections and handle communication with the
+    //! client. This method is executed in a separate thread.
     // ------------------------------------------------------------------------
     void acceptConnection();
 
@@ -110,6 +115,7 @@ private:
     void createSignalSocket();
 
 private:
+
     //! \brief Maximum message size in bytes
     static constexpr size_t MAX_MESSAGE_SIZE = 1024 * 1024; // 1MB
 

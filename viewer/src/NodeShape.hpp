@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -33,7 +33,7 @@ namespace bt {
 // ****************************************************************************
 //! \brief Class representing a node with rounded corners and gradient
 // ****************************************************************************
-class NodeShape : public sf::Drawable, public sf::Transformable
+class NodeShape: public sf::Drawable, public sf::Transformable
 {
 public:
 
@@ -54,7 +54,9 @@ public:
     //! \param[in] p_font Font to use.
     //! \param[in] p_charSize Character size.
     // ------------------------------------------------------------------------
-    void setText(const std::string& p_text, const sf::Font& p_font, unsigned int p_charSize = 24);
+    void setText(const std::string& p_text,
+                 const sf::Font& p_font,
+                 unsigned int p_charSize = 24);
 
     // ------------------------------------------------------------------------
     //! \brief Set the icon of the node.
@@ -69,8 +71,10 @@ public:
     //! \param[in] p_secondaryColor Secondary color (bottom).
     //! \param[in] p_borderColor Border color.
     // ------------------------------------------------------------------------
-    void setColors(const sf::Color& p_mainColor, const sf::Color& p_secondaryColor,
-                  const sf::Color& p_borderColor = sf::Color(0, 255, 255, 200));
+    void
+    setColors(const sf::Color& p_mainColor,
+              const sf::Color& p_secondaryColor,
+              const sf::Color& p_borderColor = sf::Color(0, 255, 255, 200));
 
     // ------------------------------------------------------------------------
     //! \brief Enable or disable text smoothing.
@@ -95,12 +99,14 @@ public:
     }
 
 private:
+
     // ------------------------------------------------------------------------
     //! \brief Draw method called by SFML.
     //! \param[in] target Render target.
     //! \param[in] p_states Render states.
     // ------------------------------------------------------------------------
-    void draw(sf::RenderTarget& p_target, sf::RenderStates p_states) const override;
+    void draw(sf::RenderTarget& p_target,
+              sf::RenderStates p_states) const override;
 
     // ------------------------------------------------------------------------
     //! \brief Update the geometry of the node.
@@ -113,7 +119,7 @@ private:
     void updateRoundedRectangle();
 
     // ------------------------------------------------------------------------
-        //! \brief Update the cyan border.
+    //! \brief Update the cyan border.
     // ------------------------------------------------------------------------
     void updateBorder();
 
@@ -124,7 +130,8 @@ private:
     //! \param[in] p_factor Interpolation factor (0.0 to 1.0).
     //! \return Interpolated color.
     // ------------------------------------------------------------------------
-    sf::Color interpolateColor(const sf::Color& p_color1, const sf::Color& p_color2,
+    sf::Color interpolateColor(const sf::Color& p_color1,
+                               const sf::Color& p_color2,
                                float p_factor) const;
 
 private:

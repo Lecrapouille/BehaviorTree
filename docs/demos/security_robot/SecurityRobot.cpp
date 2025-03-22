@@ -2,13 +2,13 @@
 // Security Robot Demo - Shows various behavior tree nodes in action
 //*****************************************************************************
 
-#include "BehaviorTree/TreeBuilder.hpp"
 #include "BehaviorTree/BehaviorTree.hpp"
 #include "BehaviorTree/BehaviorTreeVisualizer.hpp"
-#include <iostream>
-#include <chrono>
-#include <thread>
+#include "BehaviorTree/TreeBuilder.hpp"
 #include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <thread>
 
 namespace bt {
 namespace demo {
@@ -16,12 +16,11 @@ namespace demo {
 // ****************************************************************************
 //! \brief Check if battery level is above threshold
 // ****************************************************************************
-class CheckBattery : public Action
+class CheckBattery: public Action
 {
 public:
-    explicit CheckBattery(Blackboard::Ptr blackboard)
-        : Action(blackboard)
-    {}
+
+    explicit CheckBattery(Blackboard::Ptr blackboard) : Action(blackboard) {}
 
     Status onRunning() override
     {
@@ -29,7 +28,7 @@ public:
         int current_battery = m_blackboard->getOr<int>("battery_level", 100);
         current_battery = std::max(0, current_battery - 5); // Consumption of 5%
         m_blackboard->set<int>("battery_level", current_battery);
-        
+
         std::cout << "🔋 Checking battery: " << current_battery << "%\n";
         return (current_battery > 20) ? Status::FAILURE : Status::SUCCESS;
     }
@@ -38,34 +37,34 @@ public:
 // ****************************************************************************
 //! \brief Patrol action that simulates robot movement
 // ****************************************************************************
-class Patrol : public Action
+class Patrol: public Action
 {
 public:
-    explicit Patrol(Blackboard::Ptr blackboard)
-        : Action(blackboard)
-    {}
+
+    explicit Patrol(Blackboard::Ptr blackboard) : Action(blackboard) {}
 
     Status onRunning() override
     {
         // Consume battery during patrol
         int current_battery = m_blackboard->getOr<int>("battery_level", 100);
-        current_battery = std::max(0, current_battery - 10); // Consumption of 10%
+        current_battery =
+            std::max(0, current_battery - 10); // Consumption of 10%
         m_blackboard->set<int>("battery_level", current_battery);
-        
-        std::cout << "🤖 Patrolling area... Battery: " << current_battery << "%\n";
-        return Status::RUNNING;  // The patrol continues until interruption
+
+        std::cout << "🤖 Patrolling area... Battery: " << current_battery
+                  << "%\n";
+        return Status::RUNNING; // The patrol continues until interruption
     }
 };
 
 // ****************************************************************************
 //! \brief Check for security threats
 // ****************************************************************************
-class DetectThreat : public Action
+class DetectThreat: public Action
 {
 public:
-    explicit DetectThreat(Blackboard::Ptr blackboard)
-        : Action(blackboard)
-    {}
+
+    explicit DetectThreat(Blackboard::Ptr blackboard) : Action(blackboard) {}
 
     Status onRunning() override
     {
@@ -78,9 +77,10 @@ public:
 // ****************************************************************************
 //! \brief Send alert when threat is detected
 // ****************************************************************************
-class SendAlert : public Action
+class SendAlert: public Action
 {
 public:
+
     Status onRunning() override
     {
         std::cout << "🚨 ALERT: Security threat detected! 🚨\n";
@@ -91,19 +91,19 @@ public:
 // ****************************************************************************
 //! \brief Recharge robot's battery
 // ****************************************************************************
-class Recharge : public Action
+class Recharge: public Action
 {
 public:
-    explicit Recharge(Blackboard::Ptr blackboard)
-        : Action(blackboard)
-    {}
+
+    explicit Recharge(Blackboard::Ptr blackboard) : Action(blackboard) {}
 
     Status onRunning() override
     {
         int current_battery = m_blackboard->getOr<int>("battery_level", 0);
-        current_battery = std::min(100, current_battery + 20); // Recharge de 20%
+        current_battery =
+            std::min(100, current_battery + 20); // Recharge de 20%
         m_blackboard->set<int>("battery_level", current_battery);
-        
+
         std::cout << "⚡ Recharging battery: " << current_battery << "% 🔌\n";
         return (current_battery >= 100) ? Status::SUCCESS : Status::RUNNING;
     }
@@ -112,32 +112,45 @@ public:
 // ****************************************************************************
 //! \brief Factory to register custom actions.
 // ****************************************************************************
-class SecurityRobotFactory : public bt::NodeFactory
+class SecurityRobotFactory: public bt::NodeFactory
 {
 public:
+
     SecurityRobotFactory(bt::Blackboard::Ptr blackboard)
     {
         // Register actions with simplified syntax
-        // Equivalent to registerNode<CheckBattery>("check_battery", blackboard);
-        registerAction("check_battery", [blackboard]() {
-            int current_battery = blackboard->getOr<int>("battery_level", 100);
-            current_battery = std::max(0, current_battery - 5);
-            blackboard->set<int>("battery_level", current_battery);
-            
-            std::cout << "🔋 Checking battery: " << current_battery << "%\n";
-            return (current_battery > 20) ? Status::FAILURE : Status::SUCCESS;
-        }, blackboard);
+        // Equivalent to registerNode<CheckBattery>("check_battery",
+        // blackboard);
+        registerAction(
+            "check_battery",
+            [blackboard]() {
+                int current_battery =
+                    blackboard->getOr<int>("battery_level", 100);
+                current_battery = std::max(0, current_battery - 5);
+                blackboard->set<int>("battery_level", current_battery);
+
+                std::cout << "🔋 Checking battery: " << current_battery
+                          << "%\n";
+                return (current_battery > 20) ? Status::FAILURE
+                                              : Status::SUCCESS;
+            },
+            blackboard);
 
         // Register actions with simplified syntax
         // Equivalent to registerNode<Patrol>("patrol", blackboard);
-        registerAction("patrol", [blackboard]() {
-            int current_battery = blackboard->getOr<int>("battery_level", 100);
-            current_battery = std::max(0, current_battery - 10);
-            blackboard->set<int>("battery_level", current_battery);
-            
-            std::cout << "🤖 Patrolling area... Battery: " << current_battery << "%\n";
-            return Status::RUNNING;
-        }, blackboard);
+        registerAction(
+            "patrol",
+            [blackboard]() {
+                int current_battery =
+                    blackboard->getOr<int>("battery_level", 100);
+                current_battery = std::max(0, current_battery - 10);
+                blackboard->set<int>("battery_level", current_battery);
+
+                std::cout << "🤖 Patrolling area... Battery: "
+                          << current_battery << "%\n";
+                return Status::RUNNING;
+            },
+            blackboard);
 
         // Simplified node registration using templates
         registerNode<Recharge>("recharge", blackboard);
@@ -160,7 +173,8 @@ void runDemo()
     bt::TreeBuilder builder;
 
     // Load the tree from the YAML file
-    auto tree = builder.fromFile(factory, "demos/security_robot/security_robot.yaml");
+    auto tree =
+        builder.fromFile(factory, "demos/security_robot/security_robot.yaml");
     if (!tree)
     {
         std::cerr << "Failed to load behavior tree from YAML\n";
@@ -169,9 +183,11 @@ void runDemo()
 
     // Initialize the connection with the visualizer
     BehaviorTreeVisualizer visualizer(*tree); // TODO: observer ?
-    if (auto ec = visualizer.connect("127.0.0.1", 9090, std::chrono::seconds(5)))
+    if (auto ec =
+            visualizer.connect("127.0.0.1", 9090, std::chrono::seconds(5)))
     {
-        std::cerr << "Failed to connect to the visualizer: " << ec.message() << std::endl;
+        std::cerr << "Failed to connect to the visualizer: " << ec.message()
+                  << std::endl;
         return;
     }
 
@@ -182,16 +198,19 @@ void runDemo()
         std::cout << "\n--- Tick " << i << " ---\n";
 
         // Simulate state changes
-        if (i == 3) blackboard->set<bool>("threat_detected", true);
-        if (i == 5) blackboard->set<int>("battery_level", 10);
-        if (i == 10) blackboard->set<bool>("threat_detected", false);
+        if (i == 3)
+            blackboard->set<bool>("threat_detected", true);
+        if (i == 5)
+            blackboard->set<int>("battery_level", 10);
+        if (i == 10)
+            blackboard->set<bool>("threat_detected", false);
 
         // Update the tree
         tree->tick();
 
         // Update the visualizer
         visualizer.tick(); // TODO: hidden by an observer pattern ?
-        
+
         // Wait for the next tick
 #if 0
         std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -213,10 +232,12 @@ void runDemo()
 // ****************************************************************************
 int main()
 {
-    try {
+    try
+    {
         bt::demo::runDemo();
     }
-    catch (const std::exception& e) {
+    catch (const std::exception& e)
+    {
         std::cerr << "Error: " << e.what() << std::endl;
     }
     return 0;

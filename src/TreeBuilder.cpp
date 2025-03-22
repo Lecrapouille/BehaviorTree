@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -30,7 +30,8 @@
 namespace bt {
 
 // ----------------------------------------------------------------------------
-std::unique_ptr<Tree> TreeBuilder::fromFile(NodeFactory const& p_factory, std::string const& p_file_path)
+std::unique_ptr<Tree> TreeBuilder::fromFile(NodeFactory const& p_factory,
+                                            std::string const& p_file_path)
 {
     try
     {
@@ -46,19 +47,22 @@ std::unique_ptr<Tree> TreeBuilder::fromFile(NodeFactory const& p_factory, std::s
     }
     catch (const YAML::Exception& e)
     {
-        throw std::runtime_error("YAML parsing error: " + std::string(e.what()));
+        throw std::runtime_error("YAML parsing error: " +
+                                 std::string(e.what()));
     }
 }
 
 // ----------------------------------------------------------------------------
-std::unique_ptr<Tree> TreeBuilder::fromText(NodeFactory const& p_factory, std::string const& p_yaml_text)
+std::unique_ptr<Tree> TreeBuilder::fromText(NodeFactory const& p_factory,
+                                            std::string const& p_yaml_text)
 {
     try
     {
         YAML::Node root = YAML::Load(p_yaml_text);
         if (!root["behavior_tree"])
         {
-            throw std::runtime_error("Missing 'behavior_tree' node in YAML text");
+            throw std::runtime_error(
+                "Missing 'behavior_tree' node in YAML text");
         }
 
         auto tree = std::make_unique<Tree>();
@@ -67,12 +71,14 @@ std::unique_ptr<Tree> TreeBuilder::fromText(NodeFactory const& p_factory, std::s
     }
     catch (const YAML::Exception& e)
     {
-        throw std::runtime_error("YAML parsing error: " + std::string(e.what()));
+        throw std::runtime_error("YAML parsing error: " +
+                                 std::string(e.what()));
     }
 }
 
 // ----------------------------------------------------------------------------
-Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node const& p_node)
+Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory,
+                                     YAML::Node const& p_node)
 {
     if (!p_node.IsMap())
     {
@@ -114,11 +120,13 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         }
         if (!node_content["children"].IsSequence())
         {
-            throw std::runtime_error("Sequence 'children' field must be a sequence");
+            throw std::runtime_error(
+                "Sequence 'children' field must be a sequence");
         }
         if (node_content["children"].size() < 2)
         {
-            throw std::runtime_error("Sequence must have at least two children");
+            throw std::runtime_error(
+                "Sequence must have at least two children");
         }
         for (auto const& child : node_content["children"])
         {
@@ -143,11 +151,13 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         }
         if (!node_content["children"].IsSequence())
         {
-            throw std::runtime_error("Selector 'children' field must be a sequence");
+            throw std::runtime_error(
+                "Selector 'children' field must be a sequence");
         }
         if (node_content["children"].size() < 2)
         {
-            throw std::runtime_error("Selector must have at least two children");
+            throw std::runtime_error(
+                "Selector must have at least two children");
         }
         for (auto const& child : node_content["children"])
         {
@@ -158,32 +168,43 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
     else if (type == "parallel")
     {
         // Check if we want to use success/failure policies or thresholds
-        bool has_policies = node_content["success_on_all"] || node_content["fail_on_all"];
-        bool has_thresholds = node_content["success_threshold"] || node_content["failure_threshold"];
+        bool has_policies =
+            node_content["success_on_all"] || node_content["fail_on_all"];
+        bool has_thresholds = node_content["success_threshold"] ||
+                              node_content["failure_threshold"];
 
         Node::Ptr par;
         if (has_policies && has_thresholds)
         {
-            throw std::runtime_error("Cannot specify both success/failure policies and thresholds policies");
+            throw std::runtime_error("Cannot specify both success/failure "
+                                     "policies and thresholds policies");
         }
         else if (!has_policies && !has_thresholds)
         {
-            throw std::runtime_error("Missing success/failure policies or thresholds policies");
+            throw std::runtime_error(
+                "Missing success/failure policies or thresholds policies");
         }
         else if (has_policies)
         {
-            bool success_on_all = node_content["success_on_all"] ?
-                node_content["success_on_all"].as<bool>() : true;
-            bool fail_on_all = node_content["fail_on_all"] ?
-                node_content["fail_on_all"].as<bool>() : true;
+            bool success_on_all =
+                node_content["success_on_all"]
+                    ? node_content["success_on_all"].as<bool>()
+                    : true;
+            bool fail_on_all = node_content["fail_on_all"]
+                                   ? node_content["fail_on_all"].as<bool>()
+                                   : true;
             par = Node::create<ParallelAll>(success_on_all, fail_on_all);
         }
         else // has_thresholds
         {
-            size_t success_threshold = node_content["success_threshold"] ?
-                node_content["success_threshold"].as<size_t>() : size_t(1);
-            size_t failure_threshold = node_content["failure_threshold"] ?
-                node_content["failure_threshold"].as<size_t>() : size_t(1);
+            size_t success_threshold =
+                node_content["success_threshold"]
+                    ? node_content["success_threshold"].as<size_t>()
+                    : size_t(1);
+            size_t failure_threshold =
+                node_content["failure_threshold"]
+                    ? node_content["failure_threshold"].as<size_t>()
+                    : size_t(1);
             par = Node::create<Parallel>(success_threshold, failure_threshold);
         }
 
@@ -202,15 +223,18 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         }
         if (!node_content["children"].IsSequence())
         {
-            throw std::runtime_error("Parallel 'children' field must be a sequence");
+            throw std::runtime_error(
+                "Parallel 'children' field must be a sequence");
         }
         if (node_content["children"].size() < 2)
         {
-            throw std::runtime_error("Parallel must have at least two children");
+            throw std::runtime_error(
+                "Parallel must have at least two children");
         }
         for (const auto& child : node_content["children"])
         {
-            reinterpret_cast<Composite*>(par.get())->addChild(parseYAMLNode(p_factory, child));
+            reinterpret_cast<Composite*>(par.get())->addChild(
+                parseYAMLNode(p_factory, child));
         }
         return par;
     }
@@ -232,7 +256,8 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         }
         if (!node_content["child"].IsSequence())
         {
-            throw std::runtime_error("Decorator 'child' field must be a sequence");
+            throw std::runtime_error(
+                "Decorator 'child' field must be a sequence");
         }
         if (node_content["child"].size() != 1)
         {
@@ -243,8 +268,9 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
     }
     else if (type == "retry")
     {
-        size_t attempts = node_content["attempts"] ? 
-            node_content["attempts"].as<size_t>() : size_t(0);
+        size_t attempts = node_content["attempts"]
+                              ? node_content["attempts"].as<size_t>()
+                              : size_t(0);
         auto retry = Node::create<Retry>(attempts);
         if (node_content["name"])
         {
@@ -260,7 +286,8 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         }
         if (!node_content["child"].IsSequence())
         {
-            throw std::runtime_error("Decorator 'child' field must be a sequence");
+            throw std::runtime_error(
+                "Decorator 'child' field must be a sequence");
         }
         if (node_content["child"].size() != 1)
         {
@@ -271,8 +298,9 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
     }
     else if (type == "repeat")
     {
-        size_t times = node_content["times"] ? 
-            node_content["times"].as<size_t>() : size_t(0);
+        size_t times = node_content["times"]
+                           ? node_content["times"].as<size_t>()
+                           : size_t(0);
         auto repeat = Node::create<Repeat>(times);
         if (node_content["name"])
         {
@@ -288,7 +316,8 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         }
         if (!node_content["child"].IsSequence())
         {
-            throw std::runtime_error("Decorator 'child' field must be a sequence");
+            throw std::runtime_error(
+                "Decorator 'child' field must be a sequence");
         }
         if (node_content["child"].size() != 1)
         {
@@ -314,7 +343,8 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         }
         if (!node_content["child"].IsSequence())
         {
-            throw std::runtime_error("Decorator 'child' field must be a sequence");
+            throw std::runtime_error(
+                "Decorator 'child' field must be a sequence");
         }
         if (node_content["child"].size() != 1)
         {
@@ -340,7 +370,8 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         }
         if (!node_content["child"].IsSequence())
         {
-            throw std::runtime_error("Decorator 'child' field must be a sequence");
+            throw std::runtime_error(
+                "Decorator 'child' field must be a sequence");
         }
         if (node_content["child"].size() != 1)
         {
@@ -361,10 +392,11 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         auto action = p_factory.createNode(action_name);
         if (!action)
         {
-            throw std::runtime_error("Failed to create action node: " + action_name);
+            throw std::runtime_error("Failed to create action node: " +
+                                     action_name);
         }
         action->name = action_name;
-        
+
         // Parameters handling
         if (node_content["parameters"])
         {
@@ -382,10 +414,11 @@ Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node co
         auto condition = p_factory.createNode(condition_name);
         if (!condition)
         {
-            throw std::runtime_error("Failed to create condition node: " + condition_name);
+            throw std::runtime_error("Failed to create condition node: " +
+                                     condition_name);
         }
         condition->name = condition_name;
-        
+
         // Parameters handling
         if (node_content["parameters"])
         {

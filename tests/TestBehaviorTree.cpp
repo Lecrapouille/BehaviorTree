@@ -12,9 +12,10 @@ namespace bt {
 // ****************************************************************************
 //! \brief Test fixture for comparing with BehaviorTree.CPP.
 // ****************************************************************************
-class CompareBehaviorTest : public ::testing::Test
+class CompareBehaviorTest: public ::testing::Test
 {
 protected:
+
     void SetUp() override
     {
         m_tree = std::make_unique<Tree>();
@@ -22,6 +23,7 @@ protected:
     }
 
 protected:
+
     std::unique_ptr<Tree> m_tree;
     Blackboard::Ptr m_blackboard;
 };
@@ -72,8 +74,8 @@ TEST_F(CompareBehaviorTest, InvalidTreeMissingChildrenDepth2)
 
 // ****************************************************************************
 //! \brief Test Sequence node with success.
-//! \details Verifies that Sequence node returns SUCCESS when all children succeed.
-//! \note Compare Sequence node behavior with BehaviorTree.CPP.
+//! \details Verifies that Sequence node returns SUCCESS when all children
+//! succeed. \note Compare Sequence node behavior with BehaviorTree.CPP.
 // ****************************************************************************
 TEST_F(CompareBehaviorTest, SequenceNodeSuccess)
 {
@@ -98,25 +100,25 @@ TEST_F(CompareBehaviorTest, SequenceNodeSuccess)
         </root>)";
 
     auto btcpp_tree = factory.createTreeFromText(xml_text);
-   // EXPECT_EQ(btcpp_tree.status(), BT::NodeStatus::IDLE);
+    // EXPECT_EQ(btcpp_tree.status(), BT::NodeStatus::IDLE);
 
     // First tick: all children succeed
     EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
     EXPECT_EQ(m_tree->getStatus(), Status::SUCCESS);
     EXPECT_EQ(btcpp_tree.tickOnce(), BT::NodeStatus::SUCCESS);
-    //EXPECT_EQ(btcpp_tree.status(), BT::NodeStatus::SUCCESS);
+    // EXPECT_EQ(btcpp_tree.status(), BT::NodeStatus::SUCCESS);
 
     // Second tick: should restart from the beginning
     EXPECT_EQ(m_tree->tick(), Status::SUCCESS);
     EXPECT_EQ(m_tree->getStatus(), Status::SUCCESS);
     EXPECT_EQ(btcpp_tree.tickOnce(), BT::NodeStatus::SUCCESS);
-    //EXPECT_EQ(btcpp_tree.status(), BT::NodeStatus::SUCCESS);
+    // EXPECT_EQ(btcpp_tree.status(), BT::NodeStatus::SUCCESS);
 }
 
 // ****************************************************************************
 //! \brief Test Sequence node with failure.
-//! \details Verifies that Sequence node returns FAILURE as soon as a child fails.
-//! \note Compare Sequence node behavior with BehaviorTree.CPP.
+//! \details Verifies that Sequence node returns FAILURE as soon as a child
+//! fails. \note Compare Sequence node behavior with BehaviorTree.CPP.
 // ****************************************************************************
 TEST_F(CompareBehaviorTest, SequenceNodeFailure)
 {
@@ -153,8 +155,8 @@ TEST_F(CompareBehaviorTest, SequenceNodeFailure)
 
 // ****************************************************************************
 //! \brief Test Selector node with success.
-//! \details Verifies that Selector node returns SUCCESS as soon as a child succeeds.
-//! \note Compare Selector node behavior with BehaviorTree.CPP.
+//! \details Verifies that Selector node returns SUCCESS as soon as a child
+//! succeeds. \note Compare Selector node behavior with BehaviorTree.CPP.
 // ****************************************************************************
 TEST_F(CompareBehaviorTest, SelectorNodeSuccess)
 {
@@ -315,8 +317,8 @@ TEST_F(CompareBehaviorTest, InverterTestFailure)
 
 // ****************************************************************************
 //! \brief Test Repeat node.
-//! \details Verifies that Repeat repeats its child's action the specified number of times.
-//! \note Compare Repeat node behavior with BehaviorTree.CPP.
+//! \details Verifies that Repeat repeats its child's action the specified
+//! number of times. \note Compare Repeat node behavior with BehaviorTree.CPP.
 // ****************************************************************************
 TEST_F(CompareBehaviorTest, RepeatTest)
 {
@@ -348,22 +350,27 @@ TEST_F(CompareBehaviorTest, RepeatTest)
     EXPECT_EQ(rep.getRepetitions(), num_cycles);
 
     // BehaviorTree.CPP makes the loop within the tick time.
-    //EXPECT_EQ(btcpp_tree.tickOnce(), BT::NodeStatus::RUNNING);
-    //EXPECT_EQ(btcpp_tree.tickOnce(), BT::NodeStatus::RUNNING);
+    // EXPECT_EQ(btcpp_tree.tickOnce(), BT::NodeStatus::RUNNING);
+    // EXPECT_EQ(btcpp_tree.tickOnce(), BT::NodeStatus::RUNNING);
     EXPECT_EQ(btcpp_tree.tickOnce(), BT::NodeStatus::SUCCESS);
 }
 
 // ****************************************************************************
 //! \brief Test Repeat node with a child that returns RUNNING.
-//! \details Verifies that Repeat node returns RUNNING when its child returns RUNNING.
+//! \details Verifies that Repeat node returns RUNNING when its child returns
+//! RUNNING.
 // ****************************************************************************
 TEST_F(CompareBehaviorTest, RepeatWithRunningChild)
 {
     // Create a mock action that returns RUNNING
-    class RunningAction : public Leaf
+    class RunningAction: public Leaf
     {
     public:
-        virtual Status onRunning() override { return Status::RUNNING; }
+
+        virtual Status onRunning() override
+        {
+            return Status::RUNNING;
+        }
     };
 
     // Our implementation
@@ -384,7 +391,8 @@ TEST_F(CompareBehaviorTest, RepeatWithRunningChild)
 
 // ****************************************************************************
 //! \brief Test Repeat node with a child that returns FAILURE.
-//! \details Verifies that Repeat node returns FAILURE when its child returns FAILURE.
+//! \details Verifies that Repeat node returns FAILURE when its child returns
+//! FAILURE.
 // ****************************************************************************
 TEST_F(CompareBehaviorTest, RepeatWithFailureChild)
 {

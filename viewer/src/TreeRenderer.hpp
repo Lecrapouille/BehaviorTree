@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -26,20 +26,20 @@
 
 #pragma once
 
-#include "NodeShape.hpp"
 #include "ArcShape.hpp"
 #include "BehaviorTree/BehaviorTreeVisualizer.hpp"
+#include "NodeShape.hpp"
 
 #include <SFML/Graphics.hpp>
 
-#include <vector>
-#include <string>
 #include <filesystem>
-#include <unordered_map>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace YAML {
-    class Node;
+class Node;
 }
 
 namespace bt {
@@ -51,7 +51,7 @@ class ArcShape;
 // ****************************************************************************
 //! \brief Class for rendering the behavior tree.
 // ****************************************************************************
-class TreeRenderer : public sf::Drawable
+class TreeRenderer: public sf::Drawable
 {
 private:
 
@@ -60,13 +60,15 @@ private:
     // ************************************************************************
     struct NodeInfo
     {
-        uint32_t id;                       //!< Node ID
-        std::string name;                  //!< Node name
-        bt::Status status;                 //!< Node status
-        sf::Vector2f position;             //!< Node position
-        NodeInfo* parent;                  //!< Parent node (raw pointer because it's a back reference)
-        std::vector<NodeInfo*> children;   //!< Children nodes (raw pointers because they are back references)
-        std::unique_ptr<NodeShape> shape;  //!< Node shape
+        uint32_t id;           //!< Node ID
+        std::string name;      //!< Node name
+        bt::Status status;     //!< Node status
+        sf::Vector2f position; //!< Node position
+        NodeInfo*
+            parent; //!< Parent node (raw pointer because it's a back reference)
+        std::vector<NodeInfo*> children;  //!< Children nodes (raw pointers
+                                          //!< because they are back references)
+        std::unique_ptr<NodeShape> shape; //!< Node shape
     };
 
 public:
@@ -77,8 +79,9 @@ public:
     //! \param[in] p_font Reference to the SFML font.
     //! \param[in] p_icons Reference to the SFML icons.
     // ------------------------------------------------------------------------
-    explicit TreeRenderer(sf::RenderWindow& p_window, sf::Font& p_font,
-                         std::unordered_map<std::string, sf::Texture>& p_icons)
+    explicit TreeRenderer(sf::RenderWindow& p_window,
+                          sf::Font& p_font,
+                          std::unordered_map<std::string, sf::Texture>& p_icons)
         : m_window(p_window), m_font(p_font), m_icons(p_icons)
     {
     }
@@ -105,7 +108,10 @@ public:
     //! \brief Get the camera view.
     //! \return The camera view.
     // ------------------------------------------------------------------------
-    const sf::View& getCamera() const { return m_camera; }
+    const sf::View& getCamera() const
+    {
+        return m_camera;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Calculate node positions.
@@ -113,12 +119,14 @@ public:
     void calculateNodePositions();
 
 private:
+
     // ------------------------------------------------------------------------
     //! \brief Draw method called by SFML.
     //! \param[in] p_target Render target.
     //! \param[in] p_states Render states.
     // ------------------------------------------------------------------------
-    void draw(sf::RenderTarget& p_target, sf::RenderStates p_states) const override;
+    void draw(sf::RenderTarget& p_target,
+              sf::RenderStates p_states) const override;
 
     // ------------------------------------------------------------------------
     //! \brief Process a YAML node and create the nodes.
@@ -140,7 +148,9 @@ private:
     //! \param[in] p_target Render target.
     //! \param[in] p_states Render states.
     // ------------------------------------------------------------------------
-    void drawNode(NodeInfo& p_node, sf::RenderTarget& p_target, sf::RenderStates p_states) const;
+    void drawNode(NodeInfo& p_node,
+                  sf::RenderTarget& p_target,
+                  sf::RenderStates p_states) const;
 
     // ------------------------------------------------------------------------
     //! \brief Draw a connection between two nodes.
@@ -148,7 +158,8 @@ private:
     //! \param[in] p_end End position.
     //! \param[in] p_target Render target.
     // ------------------------------------------------------------------------
-    void drawConnection(sf::Vector2f p_start, sf::Vector2f p_end,
+    void drawConnection(sf::Vector2f p_start,
+                        sf::Vector2f p_end,
                         sf::RenderTarget& p_target) const;
 
     // ------------------------------------------------------------------------

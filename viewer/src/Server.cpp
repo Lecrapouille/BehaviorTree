@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -26,23 +26,22 @@
 
 #include "Server.hpp"
 
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <cstring>
-#include <sys/eventfd.h>
-#include <poll.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <iostream>
+#include <netinet/in.h>
+#include <poll.h>
+#include <sys/eventfd.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 namespace bt {
 
 // ----------------------------------------------------------------------------
 Server::Server(uint16_t p_port, MessageCallback p_on_message_received)
-    : m_message_callback(std::move(p_on_message_received)),
-      m_port(p_port)
+    : m_message_callback(std::move(p_on_message_received)), m_port(p_port)
 {
     // Allocate the receive buffer with an initial size
     m_receive_buffer.resize(MAX_MESSAGE_SIZE);
@@ -77,9 +76,12 @@ bool Server::start()
 
     // Configure the socket to reuse the address
     int reuse = 1;
-    if (setsockopt(m_server_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
+    if (setsockopt(
+            m_server_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) <
+        0)
     {
-        std::cerr << "Error setting socket options: " << strerror(errno) << std::endl;
+        std::cerr << "Error setting socket options: " << strerror(errno)
+                  << std::endl;
         close(m_server_socket);
         m_server_socket = -1;
         return false;
@@ -92,7 +94,9 @@ bool Server::start()
     server_addr.sin_port = htons(m_port);
 
     // Bind the socket to the address
-    if (bind(m_server_socket, reinterpret_cast<sockaddr*>(&server_addr), sizeof(server_addr)) < 0)
+    if (bind(m_server_socket,
+             reinterpret_cast<sockaddr*>(&server_addr),
+             sizeof(server_addr)) < 0)
     {
         std::cerr << "Error binding socket: " << strerror(errno) << std::endl;
         close(m_server_socket);
@@ -103,7 +107,8 @@ bool Server::start()
     // Listen on the socket
     if (listen(m_server_socket, 1) < 0)
     {
-        std::cerr << "Error listening on socket: " << strerror(errno) << std::endl;
+        std::cerr << "Error listening on socket: " << strerror(errno)
+                  << std::endl;
         close(m_server_socket);
         m_server_socket = -1;
         return false;
@@ -177,7 +182,8 @@ void Server::stop()
 // ----------------------------------------------------------------------------
 void Server::acceptConnection()
 {
-    std::cout << "Waiting for connection on port " << m_port << " ..." << std::endl;
+    std::cout << "Waiting for connection on port " << m_port << " ..."
+              << std::endl;
 
     // Configure the file descriptors for poll
     pollfd fds[2];
@@ -196,7 +202,8 @@ void Server::acceptConnection()
             if (errno == EINTR)
                 continue;
 
-            std::cerr << "Error waiting for connection: " << strerror(errno) << std::endl;
+            std::cerr << "Error waiting for connection: " << strerror(errno)
+                      << std::endl;
             break;
         }
 
@@ -214,19 +221,24 @@ void Server::acceptConnection()
             // Accept the connection
             sockaddr_in client_addr{};
             socklen_t client_addr_len = sizeof(client_addr);
-            m_client_socket = accept(m_server_socket, reinterpret_cast<sockaddr*>(&client_addr), &client_addr_len);
+            m_client_socket = accept(m_server_socket,
+                                     reinterpret_cast<sockaddr*>(&client_addr),
+                                     &client_addr_len);
 
             // If the connection fails, continue
             if (m_client_socket < 0)
             {
-                std::cerr << "Error accepting connection: " << strerror(errno) << std::endl;
+                std::cerr << "Error accepting connection: " << strerror(errno)
+                          << std::endl;
                 continue;
             }
 
             // Display the connection information
             char client_ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
-            std::cout << "Client connected from " << client_ip << ":" << ntohs(client_addr.sin_port) << std::endl;
+            inet_ntop(
+                AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+            std::cout << "Client connected from " << client_ip << ":"
+                      << ntohs(client_addr.sin_port) << std::endl;
 
             // Mark as connected and start reading messages
             m_connected = true;
@@ -286,12 +298,16 @@ void Server::readMessage()
     if (fds[0].revents & POLLIN)
     {
         // Read the data
-        ssize_t bytes = recv(m_client_socket, m_receive_buffer.data(), m_receive_buffer.size(), 0);
+        ssize_t bytes = recv(m_client_socket,
+                             m_receive_buffer.data(),
+                             m_receive_buffer.size(),
+                             0);
         if (bytes <= 0)
         {
             // Error or connection closed
             if (bytes < 0)
-                std::cerr << "Error reading data: " << strerror(errno) << std::endl;
+                std::cerr << "Error reading data: " << strerror(errno)
+                          << std::endl;
 
             m_connected = false;
             return;
@@ -313,9 +329,9 @@ void Server::handleMessage(size_t bytes)
     }
 
     // Create a copy of the received data for the callback
-    std::vector<uint8_t> message_data(
-        m_receive_buffer.begin(),
-        m_receive_buffer.begin() + static_cast<long int>(bytes));
+    std::vector<uint8_t> message_data(m_receive_buffer.begin(),
+                                      m_receive_buffer.begin() +
+                                          static_cast<long int>(bytes));
 
     try
     {
@@ -335,7 +351,8 @@ void Server::createSignalSocket()
     int sockets[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0)
     {
-        std::cerr << "Error creating signal sockets: " << strerror(errno) << std::endl;
+        std::cerr << "Error creating signal sockets: " << strerror(errno)
+                  << std::endl;
         return;
     }
 

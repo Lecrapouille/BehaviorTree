@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -26,28 +26,27 @@
 
 #pragma once
 
-#include <vector>
+#include <cstdint>
 #include <cstring>
 #include <type_traits>
-#include <cstdint>
+#include <vector>
 
 namespace bt {
 
-namespace serialization
-{
-    //! \brief Base container for serialization
-    using Container = std::vector<uint8_t>;
-}
+namespace serialization {
+//! \brief Base container for serialization
+using Container = std::vector<uint8_t>;
+} // namespace serialization
 
 // ****************************************************************************
 //! \brief Class facilitating the serialization of trivially copyable data into
 //! a dynamic byte container.
 //!
-//! By 'trivially copyable', we mean basic types (int, float), simple structures,
-//! or arrays of structures.
+//! By 'trivially copyable', we mean basic types (int, float), simple
+//! structures, or arrays of structures.
 //!
-//! This class provides a simple interface for serializing and deserializing data.
-//! It uses a dynamic byte container to store the serialized data.
+//! This class provides a simple interface for serializing and deserializing
+//! data. It uses a dynamic byte container to store the serialized data.
 //!
 //! The serialization is performed using the << and >> operators.
 //!
@@ -75,13 +74,14 @@ public:
     friend Serializer& operator<<(Serializer& serializer, DataType const& data)
     {
         // Check that the data type is trivially copyable
-        static_assert(
-            std::is_standard_layout<DataType>::value,
-            "The data type is too complex to be serialized directly");
+        static_assert(std::is_standard_layout<DataType>::value,
+                      "The data type is too complex to be serialized directly");
 
         size_t size = serializer.m_container.size();
-        serializer.m_container.resize(serializer.m_container.size() + sizeof(DataType));
-        std::memcpy(serializer.m_container.data() + size, &data, sizeof(DataType));
+        serializer.m_container.resize(serializer.m_container.size() +
+                                      sizeof(DataType));
+        std::memcpy(
+            serializer.m_container.data() + size, &data, sizeof(DataType));
         return serializer;
     }
 
@@ -92,7 +92,8 @@ public:
     //! @param[in] str The string to serialize.
     //! @return Reference to the serializer to chain operations.
     // ------------------------------------------------------------------------
-    friend Serializer& operator<<(Serializer& serializer, const std::string& str)
+    friend Serializer& operator<<(Serializer& serializer,
+                                  const std::string& str)
     {
         uint32_t size = static_cast<uint32_t>(str.size());
         serializer << size;
@@ -101,7 +102,8 @@ public:
         {
             size_t buffer_size = serializer.m_container.size();
             serializer.m_container.resize(buffer_size + size);
-            std::memcpy(serializer.m_container.data() + buffer_size, str.data(), size);
+            std::memcpy(
+                serializer.m_container.data() + buffer_size, str.data(), size);
         }
         return serializer;
     }
@@ -151,11 +153,11 @@ private:
 };
 
 // ****************************************************************************
-//! \brief Class facilitating the deserialization of trivially copyable data from
-//! a byte container.
+//! \brief Class facilitating the deserialization of trivially copyable data
+//! from a byte container.
 //!
-//! By 'trivially copyable', we mean basic types (int, float), simple structures,
-//! or arrays of structures.
+//! By 'trivially copyable', we mean basic types (int, float), simple
+//! structures, or arrays of structures.
 //!
 //! This class provides a simple interface for deserializing data.
 //! It uses a byte container to store the serialized data.
@@ -165,6 +167,7 @@ private:
 class Deserializer
 {
 public:
+
     // ------------------------------------------------------------------------
     //! \brief Constructor.
     //!
@@ -173,7 +176,8 @@ public:
     // ------------------------------------------------------------------------
     Deserializer(const serialization::Container& container)
         : m_container(container)
-    {}
+    {
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Deserialize data from the container.
@@ -191,13 +195,16 @@ public:
             "The data type is too complex to be deserialized directly");
 
         // Check that there is enough data to read
-        if (deserializer.m_position + sizeof(DataType) > deserializer.m_container.size())
+        if (deserializer.m_position + sizeof(DataType) >
+            deserializer.m_container.size())
         {
             throw std::runtime_error("Deserialization: end of data reached");
         }
 
         // Copy the data from the buffer
-        std::memcpy(&data, deserializer.m_container.data() + deserializer.m_position, sizeof(DataType));
+        std::memcpy(&data,
+                    deserializer.m_container.data() + deserializer.m_position,
+                    sizeof(DataType));
         deserializer.m_position += sizeof(DataType);
         return deserializer;
     }
@@ -209,7 +216,8 @@ public:
     //! @param[out] str The deserialized string.
     //! @return Reference to the deserializer to chain operations.
     // ------------------------------------------------------------------------
-    friend Deserializer& operator>>(Deserializer& deserializer, std::string& str)
+    friend Deserializer& operator>>(Deserializer& deserializer,
+                                    std::string& str)
     {
         // First, get the size of the string
         uint32_t size;
@@ -218,13 +226,18 @@ public:
         // Then, get the content of the string
         if (size > 0)
         {
-            if (deserializer.m_position + size > deserializer.m_container.size())
+            if (deserializer.m_position + size >
+                deserializer.m_container.size())
             {
-                throw std::runtime_error("Deserialization: end of data reached for the string");
+                throw std::runtime_error(
+                    "Deserialization: end of data reached for the string");
             }
 
             str.resize(size);
-            std::memcpy(&str[0], deserializer.m_container.data() + deserializer.m_position, size);
+            std::memcpy(&str[0],
+                        deserializer.m_container.data() +
+                            deserializer.m_position,
+                        size);
             deserializer.m_position += size;
         }
         else
@@ -253,6 +266,7 @@ public:
     }
 
 private:
+
     //! \brief Reference to the data container.
     const serialization::Container& m_container;
 

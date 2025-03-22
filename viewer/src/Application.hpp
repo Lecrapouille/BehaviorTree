@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -28,19 +28,20 @@
 
 #include "BehaviorTree/BehaviorTreeVisualizer.hpp"
 
+#include "Path.hpp"
 #include "Server.hpp"
 #include "TreeRenderer.hpp"
-#include "Path.hpp"
 
 #include <SFML/Graphics.hpp>
 
-#include <unordered_map>
+#include <filesystem>
 #include <memory>
 #include <string>
-#include <filesystem>
 #include <unordered_map>
 
-namespace YAML { class Node; }
+namespace YAML {
+class Node;
+}
 
 class NodeRenderer;
 class DebugServer;
@@ -54,6 +55,7 @@ namespace bt {
 class BehaviorTreeViewer
 {
 public:
+
     BehaviorTreeViewer();
     ~BehaviorTreeViewer();
 
@@ -97,8 +99,9 @@ private: // Initialize the application
 
     // ------------------------------------------------------------------------
     //! \brief Handle the connection to the behavior tree.
-    //! \param[in] p_was_connected True if the connection was previously established, false otherwise.
-    //! \return True if the connection is successful, false otherwise.
+    //! \param[in] p_was_connected True if the connection was previously
+    //! established, false otherwise. \return True if the connection is
+    //! successful, false otherwise.
     // ------------------------------------------------------------------------
     bool handleConnection(bool& p_was_connected);
 
@@ -124,8 +127,8 @@ private:
         sf::Text help_text;
     };
 
-    //! \brief Helper instance to find files like Linux $PATH environment variable.
-    //! Used for example for loading font files.
+    //! \brief Helper instance to find files like Linux $PATH environment
+    //! variable. Used for example for loading font files.
     Path m_path;
     //! \brief Server for communication with the behavior tree
     std::unique_ptr<Server> m_server;

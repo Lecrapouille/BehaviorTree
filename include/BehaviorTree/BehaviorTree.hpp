@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -35,15 +35,15 @@
 
 #pragma once
 
-#  include <memory>
-#  include <vector>
-#  include <string>
-#  include <unordered_map>
-#  include <cassert>
-#  include <functional>
-#  include <stdexcept>
-#  include <optional>
-#  include <any>
+#include <any>
+#include <cassert>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace bt {
 
@@ -67,8 +67,7 @@ constexpr Status INVALID_STATUS = Status(0);
 inline std::string const& to_string(Status status)
 {
     static std::string const names[5] = {
-        "INVALID", "RUNNING", "SUCCESS", "FAILURE", "???"
-    };
+        "INVALID", "RUNNING", "SUCCESS", "FAILURE", "???"};
     return names[int(status) < 4 ? int(status) : 4];
 }
 
@@ -80,7 +79,8 @@ class Blackboard
 {
 public:
 
-    template<class T> using Entry = std::unordered_map<std::string, T>;
+    template <class T>
+    using Entry = std::unordered_map<std::string, T>;
     using Ptr = std::shared_ptr<Blackboard>;
 
     ~Blackboard() = default;
@@ -90,7 +90,7 @@ public:
     //! \param[in] key The key to set the value for.
     //! \param[in] val The value to set.
     // ------------------------------------------------------------------------
-    template<typename T>
+    template <typename T>
     void set(std::string const& key, T const& val)
     {
         if (key.empty())
@@ -101,9 +101,10 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Get a value from the blackboard for a specific type.
     //! \param[in] key The key to get the value for.
-    //! \return A pair containing the value and a boolean indicating if the value was found.
+    //! \return A pair containing the value and a boolean indicating if the
+    //! value was found.
     // ------------------------------------------------------------------------
-    template<typename T>
+    template <typename T>
     std::pair<T, bool> get(std::string const& key) const
     {
         auto it = storage.find(key);
@@ -122,12 +123,13 @@ public:
     }
 
     // ------------------------------------------------------------------------
-    //! \brief Get a value from the blackboard for a specific type with a default value.
-    //! \param[in] key The key to get the value for.
-    //! \param[in] defaultValue The default value to return if the key is not found.
-    //! \return The value from the blackboard or the default value if the key is not found.
+    //! \brief Get a value from the blackboard for a specific type with a
+    //! default value. \param[in] key The key to get the value for. \param[in]
+    //! defaultValue The default value to return if the key is not found.
+    //! \return The value from the blackboard or the default value if the key is
+    //! not found.
     // ------------------------------------------------------------------------
-    template<typename T>
+    template <typename T>
     T getOr(std::string const& key, const T& defaultValue) const
     {
         auto [value, found] = get<T>(key);
@@ -139,7 +141,7 @@ public:
     //! \param[in] key The key to check
     //! \return true if the key exists, false otherwise
     // ------------------------------------------------------------------------
-    template<class T>
+    template <class T>
     bool has(std::string const& key) const
     {
         auto it = m_maps<T>.find(this);
@@ -153,7 +155,7 @@ public:
     //! \param[in] key The key to remove
     //! \return true if the key was removed, false if it didn't exist
     // ------------------------------------------------------------------------
-    template<class T>
+    template <class T>
     bool remove(std::string const& key)
     {
         auto it = m_maps<T>.find(this);
@@ -166,7 +168,7 @@ public:
     //! \brief Get all keys for a specific type
     //! \return Vector of keys stored for type T
     // ------------------------------------------------------------------------
-    template<class T>
+    template <class T>
     std::vector<std::string> getKeys() const
     {
         std::vector<std::string> keys;
@@ -186,7 +188,7 @@ public:
     //! \brief Get the entries for a specific type
     //! \return The entries for the type
     // ------------------------------------------------------------------------
-    template<class T>
+    template <class T>
     inline Entry<T>& entries() const
     {
         return m_maps<T>.at(this);
@@ -197,7 +199,7 @@ private:
     // ------------------------------------------------------------------------
     //! \brief The map of heterogeneous stacks
     // ------------------------------------------------------------------------
-    template<class T>
+    template <class T>
     static std::unordered_map<const Blackboard*, Entry<T>> m_maps;
 
     // ------------------------------------------------------------------------
@@ -220,10 +222,11 @@ public:
     //! \param[in] args The arguments to pass to the constructor of T.
     //! \return A unique pointer to the new node.
     // ------------------------------------------------------------------------
-    template<typename T, typename... Args>
+    template <typename T, typename... Args>
     static std::unique_ptr<T> create(Args&&... args)
     {
-        static_assert(std::is_base_of<Node, T>::value, "T must inherit from Node");
+        static_assert(std::is_base_of<Node, T>::value,
+                      "T must inherit from Node");
         return std::make_unique<T>(std::forward<Args>(args)...);
     }
 
@@ -260,7 +263,10 @@ public:
     //! \brief Get the status of the node.
     //! \return The status of the node.
     // ------------------------------------------------------------------------
-    inline Status getStatus() const { return m_status; }
+    inline Status getStatus() const
+    {
+        return m_status;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Reset the status of the node to INVALID_STATUS. This will force
@@ -298,7 +304,10 @@ private:
     //! \return FAILURE if the node could not be initialized, else return
     //! SUCCESS or RUNNING if the node could be initialized.
     // ------------------------------------------------------------------------
-    virtual Status onSetUp() { return Status::RUNNING; }
+    virtual Status onSetUp()
+    {
+        return Status::RUNNING;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Method invoked by the method tick() when the action is already in
@@ -316,7 +325,10 @@ private:
     //! cleanup logic.
     //! \param[in] status The status of the node (SUCCESS or FAILURE).
     // ------------------------------------------------------------------------
-    virtual void onTearDown(Status p_status) { (void) p_status; }
+    virtual void onTearDown(Status p_status)
+    {
+        (void)p_status;
+    }
 
 public:
 
@@ -332,7 +344,7 @@ protected:
 // ****************************************************************************
 //! \brief
 // ****************************************************************************
-class Tree : public Node
+class Tree: public Node
 {
 public:
 
@@ -366,7 +378,10 @@ public:
     //! \brief Check if the tree has a root node.
     //! \return True if the tree has a root node, false otherwise.
     // ------------------------------------------------------------------------
-    inline bool hasRoot() const { return m_root != nullptr; }
+    inline bool hasRoot() const
+    {
+        return m_root != nullptr;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Create and set the root node of the behavior tree.
@@ -463,7 +478,7 @@ private:
 //! \brief Base class for composite nodes that can have multiple children.
 //! Composite nodes are used to control the flow of the behavior tree.
 // ****************************************************************************
-class Composite : public Node
+class Composite: public Node
 {
 public:
 
@@ -521,7 +536,7 @@ public:
             return false;
         }
 
-        for (auto &child : m_children)
+        for (auto& child : m_children)
         {
             if (!child->isValid())
             {
@@ -545,7 +560,7 @@ protected:
 //! will try to run each child in order again.  If all children succeeds, only
 //! then does the sequence succeed.
 // ****************************************************************************
-class Sequence : public Composite
+class Sequence: public Composite
 {
 public:
 
@@ -586,7 +601,7 @@ public:
 //! next tick, it will try to run each child in order again.  If all children
 //! succeeds, only then does the reactive sequence succeed.
 // ****************************************************************************
-class ReactiveSequence : public Composite
+class ReactiveSequence: public Composite
 {
 public:
 
@@ -619,7 +634,8 @@ public:
 //! try to run the next child or start from the beginning again.  If all
 //! children succeeds, only then does the stateful sequence succeed.
 // ****************************************************************************
-class StatefulSequence : public Composite // Sequence with Memory → ContinueInOrder
+class StatefulSequence
+    : public Composite // Sequence with Memory → ContinueInOrder
 {
 public:
 
@@ -651,7 +667,7 @@ public:
 //! next tick, it will try to run each child in order again.  If all children
 //! fails, only then does the selector fail.
 // ****************************************************************************
-class Selector : public Composite
+class Selector: public Composite
 {
 public:
 
@@ -688,11 +704,11 @@ public:
 
 // ****************************************************************************
 //! \brief The ReactiveSelector composite ticks each child node in order. If a
-//! child succeeds or runs, the reactive selector returns the same status.  In the
-//! next tick, it will try to run each child in order again.  If all children
-//! fails, only then does the reactive selector fail.
+//! child succeeds or runs, the reactive selector returns the same status.  In
+//! the next tick, it will try to run each child in order again.  If all
+//! children fails, only then does the reactive selector fail.
 // ****************************************************************************
-class ReactiveSelector : public Composite
+class ReactiveSelector: public Composite
 {
 public:
 
@@ -725,7 +741,7 @@ public:
 //! will try to run the next child or start from the beginning again.  If all
 //! children fails, only then does the stateful selector fail.
 // ****************************************************************************
-class StatefulSelector : public Composite
+class StatefulSelector: public Composite
 {
 public:
 
@@ -756,7 +772,7 @@ public:
 //! It requires a minimum number of successful or failed children to determine
 //! its own status.
 // ****************************************************************************
-class Parallel : public Composite
+class Parallel: public Composite
 {
 public:
 
@@ -766,21 +782,27 @@ public:
     //! \param[in] minFail minimum failed children needed
     // ------------------------------------------------------------------------
     Parallel(int minSuccess, int minFail)
-        : m_minSuccess(minSuccess),
-          m_minFail(minFail)
-    {}
+        : m_minSuccess(minSuccess), m_minFail(minFail)
+    {
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Get the minimum number of successful children needed.
     //! \return The minimum number of successful children needed.
     // ------------------------------------------------------------------------
-    int getMinSuccess() const { return m_minSuccess; }
+    int getMinSuccess() const
+    {
+        return m_minSuccess;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Get the minimum number of failed children needed.
     //! \return The minimum number of failed children needed.
     // ------------------------------------------------------------------------
-    int getMinFail() const { return m_minFail; }
+    int getMinFail() const
+    {
+        return m_minFail;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Run the parallel composite.
@@ -793,7 +815,7 @@ public:
         int total_success = 0;
         int total_fail = 0;
 
-        for (auto &child : m_children)
+        for (auto& child : m_children)
         {
             auto status = child->tick();
             if (status == Status::SUCCESS)
@@ -828,7 +850,7 @@ private:
 //! \brief The ParallelAll composite runs all children simultaneously.
 //! It uses success/failure policies to determine its own status.
 // ****************************************************************************
-class ParallelAll : public Composite
+class ParallelAll: public Composite
 {
 public:
 
@@ -838,21 +860,28 @@ public:
     //! \param[in] failOnAll if true requires all children to fail
     // ------------------------------------------------------------------------
     ParallelAll(bool successOnAll = true, bool failOnAll = true)
-        : m_successOnAll(successOnAll),
-          m_failOnAll(failOnAll)
-    {}
+        : m_successOnAll(successOnAll), m_failOnAll(failOnAll)
+    {
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Get whether all children must succeed.
-    //! \return True if all children must succeed, false if only one must succeed.
+    //! \return True if all children must succeed, false if only one must
+    //! succeed.
     // ------------------------------------------------------------------------
-    bool getSuccessOnAll() const { return m_successOnAll; }
+    bool getSuccessOnAll() const
+    {
+        return m_successOnAll;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Get whether all children must fail.
     //! \return True if all children must fail, false if only one must fail.
     // ------------------------------------------------------------------------
-    bool getFailOnAll() const { return m_failOnAll; }
+    bool getFailOnAll() const
+    {
+        return m_failOnAll;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Run the parallel all composite.
@@ -868,7 +897,7 @@ public:
         size_t total_success = 0;
         size_t total_fail = 0;
 
-        for (auto &child : m_children)
+        for (auto& child : m_children)
         {
             auto status = child->tick();
             if (status == Status::SUCCESS)
@@ -903,7 +932,7 @@ private:
 //! \brief Base class for decorator nodes that can have only one child.
 //! Decorator nodes are used to modify the behavior of their child node.
 // ****************************************************************************
-class Decorator : public Node
+class Decorator: public Node
 {
 public:
 
@@ -965,7 +994,7 @@ protected:
 //! \brief The Succeeder decorator returns RUNNING if the child is RUNNING,
 //! else returns SUCCESS, regardless of what happens to the child.
 // ****************************************************************************
-class Succeeder : public Decorator
+class Succeeder: public Decorator
 {
 public:
 
@@ -984,7 +1013,7 @@ public:
 //! \brief The Failer decorator returns RUNNING if the child is RUNNING,
 //! else returns FAILURE, regardless of what happens to the child.
 // ****************************************************************************
-class Failer : public Decorator
+class Failer: public Decorator
 {
 public:
 
@@ -1004,7 +1033,7 @@ public:
 //! else returns the opposite of the child's status, i.e. FAILURE becomes
 //! SUCCESS and SUCCESS becomes FAILURE.
 // ****************************************************************************
-class Inverter : public Decorator
+class Inverter: public Decorator
 {
 public:
 
@@ -1031,9 +1060,10 @@ public:
 // ****************************************************************************
 //! \brief The Repeater decorator repeats infinitely or to a limit until the
 //! child returns success.
-//! \fixme the loop should be done entierly internally during the tick() method ?
+//! \fixme the loop should be done entierly internally during the tick() method
+//! ?
 // ****************************************************************************
-class Repeat : public Decorator
+class Repeat: public Decorator
 {
 public:
 
@@ -1041,9 +1071,7 @@ public:
     //! \brief Constructor taking a limit of repetitions.
     //! \param[in] p_repetitions The limit of repetitions.
     // ------------------------------------------------------------------------
-    Repeat(size_t p_repetitions = 0)
-        : m_repetitions(p_repetitions)
-    {}
+    Repeat(size_t p_repetitions = 0) : m_repetitions(p_repetitions) {}
 
     // ------------------------------------------------------------------------
     //! \brief Set up the repeater.
@@ -1063,7 +1091,7 @@ public:
     virtual Status onRunning() override
     {
         Status status = m_child->tick();
-        
+
         if (status == Status::RUNNING)
         {
             return Status::RUNNING;
@@ -1072,27 +1100,34 @@ public:
         {
             return Status::FAILURE;
         }
-        
+
         if ((m_repetitions > 0) && (++m_count == m_repetitions))
         {
             m_count = m_repetitions;
             return Status::SUCCESS;
         }
-        
+
         return Status::RUNNING;
     }
 
     // ------------------------------------------------------------------------
     //! \brief Get the current count of repetitions.
     // ------------------------------------------------------------------------
-    size_t getCount() const { return m_count; }
+    size_t getCount() const
+    {
+        return m_count;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Get the limit number of repetitions.
     // ------------------------------------------------------------------------
-    size_t getRepetitions() const { return m_repetitions; }
+    size_t getRepetitions() const
+    {
+        return m_repetitions;
+    }
 
 protected:
+
     size_t m_count = 0;
     size_t m_repetitions;
 };
@@ -1101,16 +1136,15 @@ protected:
 //! \brief The Retry decorator retries its child a specified number of times
 //! until it succeeds or the maximum number of attempts is reached.
 // ****************************************************************************
-class Retry : public Decorator
+class Retry: public Decorator
 {
 public:
+
     // ------------------------------------------------------------------------
     //! \brief Constructor taking a number of attempts.
     //! \param[in] p_attempts The maximum number of attempts.
     // ------------------------------------------------------------------------
-    Retry(size_t p_attempts)
-        : m_attempts(p_attempts)
-    {}
+    Retry(size_t p_attempts) : m_attempts(p_attempts) {}
 
     // ------------------------------------------------------------------------
     //! \brief Set up the retry.
@@ -1129,7 +1163,7 @@ public:
     virtual Status onRunning() override
     {
         Status status = m_child->tick();
-        
+
         if (status == Status::SUCCESS)
         {
             return Status::SUCCESS;
@@ -1138,12 +1172,12 @@ public:
         {
             return Status::RUNNING;
         }
-        
+
         if ((m_attempts > 0) && (++m_count >= m_attempts))
         {
             return Status::FAILURE;
         }
-        
+
         return Status::RUNNING;
     }
 
@@ -1151,15 +1185,22 @@ public:
     //! \brief Get the current count of attempts.
     //! \return The current count of attempts.
     // ------------------------------------------------------------------------
-    size_t getCount() const { return m_count; }
+    size_t getCount() const
+    {
+        return m_count;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Get the limit number of attempts.
     //! \return The limit number of attempts.
     // ------------------------------------------------------------------------
-    size_t getAttempts() const { return m_attempts; }
+    size_t getAttempts() const
+    {
+        return m_attempts;
+    }
 
 protected:
+
     size_t m_count = 0;
     size_t m_attempts;
 };
@@ -1168,7 +1209,7 @@ protected:
 //! \brief The UntilSuccess decorator repeats until the child returns success
 //! and then returns success.
 // ****************************************************************************
-class UntilSuccess : public Decorator
+class UntilSuccess: public Decorator
 {
 public:
 
@@ -1193,7 +1234,7 @@ public:
 //! \brief The UntilFailure decorator repeats until the child returns fail and
 //! then returns success.
 // ****************************************************************************
-class UntilFailure : public Decorator
+class UntilFailure: public Decorator
 {
 public:
 
@@ -1218,7 +1259,7 @@ public:
 //! \brief Base class for leaf nodes that have no children.
 //! Leaf nodes are the nodes that actually do the work.
 // ****************************************************************************
-class Leaf : public Node
+class Leaf: public Node
 {
 public:
 
@@ -1230,9 +1271,7 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Constructor with blackboard.
     // ------------------------------------------------------------------------
-    Leaf(Blackboard::Ptr p_blackboard)
-        : m_blackboard(p_blackboard)
-    {}
+    Leaf(Blackboard::Ptr p_blackboard) : m_blackboard(p_blackboard) {}
 
     // ------------------------------------------------------------------------
     //! \brief Get the blackboard for the node
@@ -1261,7 +1300,7 @@ protected:
 // ****************************************************************************
 //! \brief Simple leaf that always returns SUCCESS.
 // ****************************************************************************
-class AlwaysSuccess : public Leaf
+class AlwaysSuccess: public Leaf
 {
 public:
 
@@ -1278,7 +1317,7 @@ public:
 // ****************************************************************************
 //! \brief Simple leaf that always returns FAILURE.
 // ****************************************************************************
-class AlwaysFailure : public Leaf
+class AlwaysFailure: public Leaf
 {
 public:
 
@@ -1316,9 +1355,7 @@ public:
     //! \brief Constructor taking a function to execute.
     //! \param[in] func The function to execute when the action runs.
     // ------------------------------------------------------------------------
-    SugarAction(Function func)
-        : m_func(std::move(func))
-    {}
+    SugarAction(Function func) : m_func(std::move(func)) {}
 
     // ------------------------------------------------------------------------
     //! \brief Constructor taking a function and blackboard.
@@ -1327,7 +1364,8 @@ public:
     // ------------------------------------------------------------------------
     SugarAction(Function func, Blackboard::Ptr blackboard)
         : Leaf(blackboard), m_func(std::move(func))
-    {}
+    {
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Execute the action.
@@ -1371,9 +1409,7 @@ public:
     //! \brief Constructor taking a function to evaluate.
     //! \param[in] func The function to evaluate when the condition runs.
     // ------------------------------------------------------------------------
-    Condition(Function func)
-        : m_func(std::move(func))
-    {}
+    Condition(Function func) : m_func(std::move(func)) {}
 
     // ------------------------------------------------------------------------
     //! \brief Constructor taking a function and blackboard.
@@ -1382,7 +1418,8 @@ public:
     // ------------------------------------------------------------------------
     Condition(Function func, Blackboard::Ptr blackboard)
         : Leaf(blackboard), m_func(std::move(func))
-    {}
+    {
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Execute the condition.
@@ -1415,6 +1452,7 @@ private:
 class NodeFactory
 {
 public:
+
     //! \brief Function type for creating nodes
     using NodeCreator = std::function<std::unique_ptr<Node>()>;
 
@@ -1430,11 +1468,13 @@ public:
 
     //! \brief Create a node instance by name
     //! \param[in] name The registered name of the node type to create
-    //! \return Unique pointer to the new node instance, or nullptr if name not found
+    //! \return Unique pointer to the new node instance, or nullptr if name not
+    //! found
     std::unique_ptr<Node> createNode(const std::string& name) const
     {
         auto it = m_creators.find(name);
-        if (it != m_creators.end()) {
+        if (it != m_creators.end())
+        {
             return it->second();
         }
         return nullptr;
@@ -1463,8 +1503,8 @@ public:
     //! \param[in] func Lambda function implementing the action
     //! \param[in] blackboard The blackboard to use
     void registerAction(const std::string& name,
-                       SugarAction::Function func,
-                       Blackboard::Ptr blackboard)
+                        SugarAction::Function func,
+                        Blackboard::Ptr blackboard)
     {
         registerNode(name, [func = std::move(func), blackboard]() {
             return Node::create<SugarAction>(func, blackboard);
@@ -1475,23 +1515,20 @@ public:
     //! \tparam T The node type to register
     //! \param[in] name Name used to identify this node type
     //! \param[in] blackboard The blackboard to use
-    template<typename T>
+    template <typename T>
     void registerNode(const std::string& name, Blackboard::Ptr blackboard)
     {
-        registerNode(name, [blackboard]() {
-            return Node::create<T>(blackboard);
-        });
+        registerNode(name,
+                     [blackboard]() { return Node::create<T>(blackboard); });
     }
 
     //! \brief Helper template method to register a node without blackboard
     //! \tparam T The node type to register
     //! \param[in] name Name used to identify this node type
-    template<typename T>
+    template <typename T>
     void registerNode(const std::string& name)
     {
-        registerNode(name, []() {
-            return Node::create<T>();
-        });
+        registerNode(name, []() { return Node::create<T>(); });
     }
 
     //! \brief Helper method to register a condition with a lambda
@@ -1504,13 +1541,13 @@ public:
         });
     }
 
-    //! \brief Helper method to register a condition with a lambda and blackboard
-    //! \param[in] name Name used to identify this condition
+    //! \brief Helper method to register a condition with a lambda and
+    //! blackboard \param[in] name Name used to identify this condition
     //! \param[in] func Lambda function implementing the condition
     //! \param[in] blackboard The blackboard to use
     void registerCondition(const std::string& name,
-                          Condition::Function func,
-                          Blackboard::Ptr blackboard)
+                           Condition::Function func,
+                           Blackboard::Ptr blackboard)
     {
         registerNode(name, [func = std::move(func), blackboard]() {
             return Node::create<Condition>(func, blackboard);
@@ -1518,6 +1555,7 @@ public:
     }
 
 protected:
+
     //! \brief Map of node names to their creation functions
     std::unordered_map<std::string, NodeCreator> m_creators;
 };

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2024 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright (c) 2025 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -25,14 +25,14 @@
 //*****************************************************************************
 
 #include "BehaviorTree/TreeExporter.hpp"
-#include <yaml-cpp/yaml.h>
-#include <sstream>
 #include <fstream>
+#include <sstream>
+#include <yaml-cpp/yaml.h>
 
 namespace bt {
 
 // ----------------------------------------------------------------------------
-template<typename T>
+template <typename T>
 static bool writeToFile(std::string const& content, std::string const& filename)
 {
     std::ofstream file(filename);
@@ -254,7 +254,9 @@ YAML::Node TreeExporter::generateYAMLNode(Node const* node)
 }
 
 // ----------------------------------------------------------------------------
-void TreeExporter::generateBTCppXML(Node const* node, std::stringstream& xml, int indent)
+void TreeExporter::generateBTCppXML(Node const* node,
+                                    std::stringstream& xml,
+                                    int indent)
 {
     std::string spaces(static_cast<size_t>(indent), ' ');
 
@@ -269,7 +271,8 @@ void TreeExporter::generateBTCppXML(Node const* node, std::stringstream& xml, in
     }
     else if (auto selector = dynamic_cast<Selector const*>(node))
     {
-        xml << spaces << "<Fallback>" << std::endl;  // BT.CPP uses Fallback instead of Selector
+        xml << spaces << "<Fallback>"
+            << std::endl; // BT.CPP uses Fallback instead of Selector
         for (auto const& child : selector->getChildren())
         {
             generateBTCppXML(child.get(), xml, indent + 2);
@@ -278,8 +281,9 @@ void TreeExporter::generateBTCppXML(Node const* node, std::stringstream& xml, in
     }
     else if (auto parallel = dynamic_cast<Parallel const*>(node))
     {
-        xml << spaces << "<Parallel success_threshold=\"" << parallel->getMinSuccess()
-            << "\" failure_threshold=\"" << parallel->getMinFail() << "\">" << std::endl;
+        xml << spaces << "<Parallel success_threshold=\""
+            << parallel->getMinSuccess() << "\" failure_threshold=\""
+            << parallel->getMinFail() << "\">" << std::endl;
         for (auto const& child : parallel->getChildren())
         {
             generateBTCppXML(child.get(), xml, indent + 2);
@@ -288,10 +292,14 @@ void TreeExporter::generateBTCppXML(Node const* node, std::stringstream& xml, in
     }
     else if (auto parallel_all = dynamic_cast<ParallelAll const*>(node))
     {
-        xml << spaces << "<Parallel success_threshold=\"" 
-            << (parallel_all->getSuccessOnAll() ? parallel_all->getChildren().size() : 1)
+        xml << spaces << "<Parallel success_threshold=\""
+            << (parallel_all->getSuccessOnAll()
+                    ? parallel_all->getChildren().size()
+                    : 1)
             << "\" failure_threshold=\""
-            << (parallel_all->getFailOnAll() ? parallel_all->getChildren().size() : 1)
+            << (parallel_all->getFailOnAll()
+                    ? parallel_all->getChildren().size()
+                    : 1)
             << "\">" << std::endl;
         for (auto const& child : parallel_all->getChildren())
         {
@@ -310,7 +318,8 @@ void TreeExporter::generateBTCppXML(Node const* node, std::stringstream& xml, in
     }
     else if (auto repeat = dynamic_cast<Repeat const*>(node))
     {
-        xml << spaces << "<RetryUntilSuccessful num_attempts=\"" << repeat->getRepetitions() << "\">" << std::endl;
+        xml << spaces << "<RetryUntilSuccessful num_attempts=\""
+            << repeat->getRepetitions() << "\">" << std::endl;
         if (repeat->hasChild())
         {
             generateBTCppXML(&(repeat->getChild()), xml, indent + 2);
@@ -327,27 +336,41 @@ void TreeExporter::generateBTCppXML(Node const* node, std::stringstream& xml, in
 std::string TreeExporter::toMermaid(Tree const& tree)
 {
     std::string result = "graph TD\n";
-    
+
     // Define the styles for each type of node with classDef
-    result += "    classDef sequence fill:#b3e0ff,stroke:#0066cc,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef selector fill:#ffcccc,stroke:#cc0000,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef parallel fill:#d9b3ff,stroke:#6600cc,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef decorator fill:#ffffb3,stroke:#cccc00,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef condition fill:#b3ffb3,stroke:#00cc00,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef action fill:#ffb3d9,stroke:#cc0066,stroke-width:2px,color:#000000,font-weight:bold\n";
-    
+    result += "    classDef sequence "
+              "fill:#b3e0ff,stroke:#0066cc,stroke-width:2px,color:#000000,font-"
+              "weight:bold\n";
+    result += "    classDef selector "
+              "fill:#ffcccc,stroke:#cc0000,stroke-width:2px,color:#000000,font-"
+              "weight:bold\n";
+    result += "    classDef parallel "
+              "fill:#d9b3ff,stroke:#6600cc,stroke-width:2px,color:#000000,font-"
+              "weight:bold\n";
+    result += "    classDef decorator "
+              "fill:#ffffb3,stroke:#cccc00,stroke-width:2px,color:#000000,font-"
+              "weight:bold\n";
+    result += "    classDef condition "
+              "fill:#b3ffb3,stroke:#00cc00,stroke-width:2px,color:#000000,font-"
+              "weight:bold\n";
+    result += "    classDef action "
+              "fill:#ffb3d9,stroke:#cc0066,stroke-width:2px,color:#000000,font-"
+              "weight:bold\n";
+
     if (tree.hasRoot())
     {
         size_t counter = 0;
         generateMermaidNode(&(tree.getRoot()), 0, counter, result);
     }
-    
+
     return result;
 }
 
 // ----------------------------------------------------------------------------
-void TreeExporter::generateMermaidNode(Node const* node, size_t parent_id,
-                                       size_t& counter, std::string& result)
+void TreeExporter::generateMermaidNode(Node const* node,
+                                       size_t parent_id,
+                                       size_t& counter,
+                                       std::string& result)
 {
     if (node == nullptr)
         return;
@@ -355,7 +378,7 @@ void TreeExporter::generateMermaidNode(Node const* node, size_t parent_id,
     size_t current_id = ++counter;
     std::string node_name = node->name;
     std::string node_class = "";
-    
+
     if (dynamic_cast<Sequence const*>(node))
     {
         node_class = "sequence";
@@ -364,12 +387,13 @@ void TreeExporter::generateMermaidNode(Node const* node, size_t parent_id,
     {
         node_class = "selector";
     }
-    else if (dynamic_cast<Parallel const*>(node) || dynamic_cast<ParallelAll const*>(node))
+    else if (dynamic_cast<Parallel const*>(node) ||
+             dynamic_cast<ParallelAll const*>(node))
     {
         node_class = "parallel";
     }
-    else if (dynamic_cast<Inverter const*>(node) || 
-             dynamic_cast<Retry const*>(node) || 
+    else if (dynamic_cast<Inverter const*>(node) ||
+             dynamic_cast<Retry const*>(node) ||
              dynamic_cast<Repeat const*>(node) ||
              dynamic_cast<UntilSuccess const*>(node) ||
              dynamic_cast<UntilFailure const*>(node))
@@ -384,23 +408,25 @@ void TreeExporter::generateMermaidNode(Node const* node, size_t parent_id,
     {
         node_class = "action";
     }
-    
+
     // Add the node definition
-    result += "    node" + std::to_string(current_id) + "[\"" + node_name + "\"]\n";
-    
+    result +=
+        "    node" + std::to_string(current_id) + "[\"" + node_name + "\"]\n";
+
     // Apply the class to the node
     if (!node_class.empty())
     {
-        result += "    class node" + std::to_string(current_id) + " " + node_class + "\n";
+        result += "    class node" + std::to_string(current_id) + " " +
+                  node_class + "\n";
     }
-    
+
     // Add the connection to the parent (if it's not the root)
     if (parent_id > 0)
     {
         result += "    node" + std::to_string(parent_id) + " --> node" +
-                 std::to_string(current_id) + "\n";
+                  std::to_string(current_id) + "\n";
     }
-    
+
     // Process the children for composite nodes
     if (auto composite = dynamic_cast<Composite const*>(node))
     {
@@ -414,7 +440,8 @@ void TreeExporter::generateMermaidNode(Node const* node, size_t parent_id,
     {
         if (decorator->hasChild())
         {
-            generateMermaidNode(&decorator->getChild(), current_id, counter, result);
+            generateMermaidNode(
+                &decorator->getChild(), current_id, counter, result);
         }
     }
 }
