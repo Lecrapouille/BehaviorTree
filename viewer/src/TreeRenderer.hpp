@@ -36,6 +36,7 @@
 #include <string>
 #include <filesystem>
 #include <unordered_map>
+#include <memory>
 
 namespace YAML {
     class Node;
@@ -52,10 +53,23 @@ class ArcShape;
 // ****************************************************************************
 class TreeRenderer : public sf::Drawable
 {
+private:
+
+    // ************************************************************************
+    //! \brief Structure to store node information
+    // ************************************************************************
+    struct NodeInfo
+    {
+        uint32_t id;                       //!< Node ID
+        std::string name;                  //!< Node name
+        bt::Status status;                 //!< Node status
+        sf::Vector2f position;             //!< Node position
+        NodeInfo* parent;                  //!< Parent node (raw pointer because it's a back reference)
+        std::vector<NodeInfo*> children;   //!< Children nodes (raw pointers because they are back references)
+        std::unique_ptr<NodeShape> shape;  //!< Node shape
+    };
+
 public:
-    //! \brief Constant for rendering
-    static constexpr float HORIZONTAL_SPACING = 100.0f;
-    static constexpr float VERTICAL_SPACING = 120.0f;
 
     // ------------------------------------------------------------------------
     //! \brief Constructor.
@@ -77,8 +91,26 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Process a received message.
     //! \param[in] data Message data.
+    //! \return True if the message was processed, false otherwise.
     // ------------------------------------------------------------------------
-    void handleMessage(const std::vector<uint8_t>& data);
+    bool handleMessage(const std::vector<uint8_t>& data);
+
+    // ------------------------------------------------------------------------
+    //! \brief Center the camera on the window.
+    //! \param[in] p_target Render target.
+    // ------------------------------------------------------------------------
+    void centerCamera(sf::RenderTarget& p_target);
+
+    // ------------------------------------------------------------------------
+    //! \brief Get the camera view.
+    //! \return The camera view.
+    // ------------------------------------------------------------------------
+    const sf::View& getCamera() const { return m_camera; }
+
+    // ------------------------------------------------------------------------
+    //! \brief Calculate node positions.
+    // ------------------------------------------------------------------------
+    void calculateNodePositions();
 
 private:
     // ------------------------------------------------------------------------
@@ -89,34 +121,11 @@ private:
     void draw(sf::RenderTarget& p_target, sf::RenderStates p_states) const override;
 
     // ------------------------------------------------------------------------
-    //! \brief Process a YAML node.
+    //! \brief Process a YAML node and create the nodes.
     //! \param[in] node YAML node.
-    //! \param[in] parent_id Parent ID.
+    //! \param[in,out] next_id Next available ID.
     // ------------------------------------------------------------------------
-    void processYAMLNode(const YAML::Node& node, uint32_t parent_id);
-
-    // ------------------------------------------------------------------------
-    //! \brief Calculate the tree layout (positions of nodes).
-    // ------------------------------------------------------------------------
-    void calculateTreeLayout();
-
-    // ------------------------------------------------------------------------
-    //! \brief Render a node.
-    //! \param[in] p_name Node name.
-    //! \param[in] p_status Node status.
-    //! \param[in] p_position Node position.
-    //! \param[in] p_target Render target.
-    // ------------------------------------------------------------------------
-    void renderNode(const char* p_name, bt::Status p_status,
-                    sf::Vector2f p_position, sf::RenderTarget& p_target) const;
-
-    // ------------------------------------------------------------------------
-    //! \brief Configure a node.
-    //! \param[in] p_nodeShape Node to configure.
-    //! \param[in] p_name Node name.
-    //! \param[in] p_status Node status.
-    // ------------------------------------------------------------------------
-    void configureNodeShape(NodeShape* p_nodeShape, const char* p_name, bt::Status p_status) const;
+    void createNodes(const YAML::Node& node, uint32_t& next_id);
 
     // ------------------------------------------------------------------------
     //! \brief Set node icon.
@@ -126,13 +135,12 @@ private:
     void setNodeIcon(NodeShape* p_nodeShape, const char* p_name) const;
 
     // ------------------------------------------------------------------------
-    //! \brief Draw a node with shadow.
-    //! \param[in] p_nodeShape Node to draw.
-    //! \param[in] p_position Node position.
+    //! \brief Draw a node.
+    //! \param[in] p_node Node.
     //! \param[in] p_target Render target.
+    //! \param[in] p_states Render states.
     // ------------------------------------------------------------------------
-    void drawNodeWithShadow(NodeShape* p_nodeShape, sf::Vector2f p_position,
-                           sf::RenderTarget& p_target) const;
+    void drawNode(NodeInfo& p_node, sf::RenderTarget& p_target, sf::RenderStates p_states) const;
 
     // ------------------------------------------------------------------------
     //! \brief Draw a connection between two nodes.
@@ -151,37 +159,22 @@ private:
     sf::Color getStatusColor(bt::Status p_status) const;
 
     // ------------------------------------------------------------------------
-    //! \brief Center the camera on the window.
-    //! \param[in] p_target Render target.
+    //! \brief Debug method to print node information.
     // ------------------------------------------------------------------------
-    void centerCamera(sf::RenderTarget& p_target) const;
+    void debugPrintNodes() const;
 
 private:
-
-    // ************************************************************************
-    //! \brief Structure to store node information
-    // ************************************************************************
-    struct NodeInfo
-    {
-        uint32_t id;                       //!< Node ID
-        std::string name;                  //!< Node name
-        bt::Status status;                 //!< Node status
-        sf::Vector2f position;             //!< Node position
-        uint32_t parent_id;                //!< Parent ID
-        std::vector<uint32_t> children_ids; //!< Children IDs
-        NodeShape* shape;                  //!< Node shape
-    };
 
     //! \brief Reference to the SFML window
     sf::RenderWindow& m_window;
     //! \brief Font
     sf::Font& m_font;
-    //! \brief Icon collection
+    //! \brief Icons
     std::unordered_map<std::string, sf::Texture>& m_icons;
-    //! \brief Camera view
-    mutable sf::View m_camera;
-    //! \brief Tree nodes
-    mutable std::vector<NodeInfo> m_nodes;
+    //! \brief Camera
+    sf::View m_camera;
+    //! \brief Map of nodes indexed by their ID
+    std::unordered_map<uint32_t, std::unique_ptr<NodeInfo>> m_nodes;
 };
 
 } // namespace bt

@@ -78,19 +78,12 @@ bool BehaviorTreeViewer::initialize(uint32_t p_width, uint32_t p_height, uint16_
         "Behavior Tree Viewer", sf::Style::Default, settings);
     m_render_context.window.setFramerateLimit(60);
 
-    // Load the resources
     if (!loadResources())
     {
         std::cerr << "Warning: Failed to load the resources" << std::endl;
     }
-
-    // Initialize the background
     initializeBackground();
-
-    // Initialize the camera with the default view
     resetCamera();
-
-    // Initialize the help text
     initializeHelpText(p_port);
 
     // Initialize the tree renderer
@@ -243,7 +236,8 @@ void BehaviorTreeViewer::run()
         // Draw the tree with the camera view
         if ((is_connected) && (m_tree_renderer != nullptr))
         {
-            m_render_context.window.setView(m_render_context.camera);
+            // Use the view from TreeRenderer
+            m_render_context.window.setView(m_tree_renderer->getCamera());
             m_render_context.window.draw(*m_tree_renderer);
         }
 

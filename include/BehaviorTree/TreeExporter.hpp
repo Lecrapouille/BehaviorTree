@@ -27,8 +27,6 @@
 #pragma once
 
 #  include "BehaviorTree/BehaviorTree.hpp"
-#  include <fstream>
-#  include <unordered_map>
 
 // ****************************************************************************
 // Forward declarations
@@ -43,28 +41,22 @@ namespace bt {
 class TreeExporter
 {
 public:
-    // ------------------------------------------------------------------------
-    //! \brief Type de map utilisée pour associer les nœuds à leurs IDs.
-    // ------------------------------------------------------------------------
-    using NodeToIdMap = std::unordered_map<bt::Node*, uint32_t>;
 
     // ------------------------------------------------------------------------
     //! \brief Export behavior tree to our YAML format.
     //! \param[in] tree The behavior tree to export.
-    //! \param[in] node_ids Optional map of node IDs.
     //! \return YAML string representation.
     // ------------------------------------------------------------------------
-    static std::string toYAML(Tree const& tree, const NodeToIdMap* node_ids = nullptr);
+    static std::string toYAML(Tree const& tree);
 
     // ------------------------------------------------------------------------
     //! \brief Export behavior tree to our YAML file.
     //! \param[in] tree The behavior tree to export.
     //! \param[in] filename Path to save the YAML file.
-    //! \param[in] node_ids Optional map of node IDs.
     //! \throw std::runtime_error if file cannot be written.
     //! \return True if file was written successfully, false otherwise.
     // ------------------------------------------------------------------------
-    static bool toYAMLFile(Tree const& tree, std::string const& filename, const NodeToIdMap* node_ids = nullptr);
+    static bool toYAMLFile(Tree const& tree, std::string const& filename);
 
     // ------------------------------------------------------------------------
     //! \brief Export behavior tree to BehaviorTree.CPP XML format.
@@ -81,21 +73,18 @@ public:
     // ------------------------------------------------------------------------
     static bool toBTCppXMLFile(Tree const& tree, std::string const& filename);
 
-private:
-    static YAML::Node generateYAMLNode(Node::Ptr const& node, const NodeToIdMap* node_ids = nullptr);
-    static void generateBTCppXML(Node::Ptr const& node, std::stringstream& xml, int indent);
+    // ------------------------------------------------------------------------
+    //! \brief Export the behavior tree to Mermaid format.
+    //! \param[in] tree The behavior tree to export.
+    //! \return String containing the Mermaid diagram definition.
+    // ------------------------------------------------------------------------
+    static std::string toMermaid(Tree const& tree);
 
-    template<typename T>
-    static bool writeToFile(std::string const& content, std::string const& filename)
-    {
-        std::ofstream file(filename);
-        if (!file.is_open())
-        {
-            return false;
-        }
-        file << content;
-        return true;
-    }
+private:
+
+    static void generateMermaidNode(Node const* node, size_t parent_id, size_t& counter, std::string& result);
+    static YAML::Node generateYAMLNode(Node const*  node);
+    static void generateBTCppXML(Node const* node, std::stringstream& xml, int indent);
 };
 
 } // namespace bt

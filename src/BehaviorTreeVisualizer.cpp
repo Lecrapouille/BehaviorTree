@@ -1,29 +1,32 @@
 #include "BehaviorTree/BehaviorTreeVisualizer.hpp"
-#include "BehaviorTree/TreeExporter.hpp"
-#include <boost/asio.hpp>
-#include <chrono>
-#include <sys/socket.h>
+#include "BehaviorTree/private/Serialization.hpp"
+
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <poll.h>
+
 #include <iostream>
-#include <sstream>
 
 namespace bt
 {
 
 // ----------------------------------------------------------------------------
-BehaviorTreeVisualizer::BehaviorTreeVisualizer(bt::Tree& p_bt, std::string p_ip, uint16_t p_port)
-    : m_behavior_tree(p_bt), m_ip(p_ip), m_port(p_port)
+BehaviorTreeVisualizer::BehaviorTreeVisualizer(bt::Tree const& p_bt)
+    : m_behavior_tree(p_bt)
 {
-    // Start the communication thread in the background
-    m_worker_thread = std::thread(&BehaviorTreeVisualizer::workerThread, this);
 }
 
 // ----------------------------------------------------------------------------
 BehaviorTreeVisualizer::~BehaviorTreeVisualizer()
+{
+    disconnect();
+}
+
+// ----------------------------------------------------------------------------
+void BehaviorTreeVisualizer::disconnect()
 {
     // Signal the thread to stop
     m_running = false;
@@ -43,46 +46,27 @@ BehaviorTreeVisualizer::~BehaviorTreeVisualizer()
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::updateDebugInfo()
+std::error_code BehaviorTreeVisualizer::connect(const std::string& p_ip, uint16_t p_port, std::chrono::milliseconds p_timeout)
 {
-    // Check if we are connected and if the tree structure has been sent
-    if (!m_connected || !m_tree_structure_sent)
+    std::cout << "Connecting to the visualizer (" << p_ip << ":" << p_port
+              << " with timeout " << p_timeout.count() << " ms)..."
+              << std::endl;
+
+    // Store connection parameters
+    m_ip = p_ip;
+    m_port = p_port;
+
+    // Check if the tree has a root to avoid segmentation fault
+    if (!m_behavior_tree.hasRoot())
     {
-        std::cout << "Not connected or tree structure not sent, not updating states" << std::endl;
-        return;
+        return make_error_code(visualizer_errc::tree_has_no_root);
     }
-
-    // Create a status update
-    StatusUpdate update;
-
-    // Capture the state of all nodes in the tree
-    captureNodeStates(m_behavior_tree.getRoot(), update);
-
-    // If no state has been captured, do not send an update
-    if (update.states.empty())
-    {
-        return;
-    }
-
-    // Add the update to the queue for sending by the worker thread
-    {
-        std::lock_guard<std::mutex> lock(m_queue_mutex);
-        m_status_queue.push(std::move(update));
-    }
-}
-
-// ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::connect()
-{
-    std::cout << "Tentative de connexion à " << m_ip << ":" << m_port << std::endl;
 
     // Create a TCP socket
     m_socket = ::socket(AF_INET, SOCK_STREAM, 0);
     if (m_socket < 0)
     {
-        std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
-        m_connected = false;
-        return;
+        return make_error_code(visualizer_errc::socket_creation_failed);
     }
 
     // Configure the server address
@@ -91,145 +75,180 @@ void BehaviorTreeVisualizer::connect()
     serverAddr.sin_port = htons(m_port);
     if (inet_pton(AF_INET, m_ip.c_str(), &serverAddr.sin_addr) <= 0)
     {
-        std::cerr << "Invalid IP address: " << m_ip << std::endl;
         close(m_socket);
         m_socket = -1;
-        m_connected = false;
-        return;
+        return make_error_code(visualizer_errc::invalid_ip_address);
     }
 
-    // Connect to the server
-    std::cout << "Attempting to connect to the server..." << std::endl;
-    if (::connect(m_socket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) < 0)
+    // Attempt connection with timeout
+    auto start_time = std::chrono::steady_clock::now();
+    m_connected = false;
+
+    while (!m_connected)
     {
-        std::cerr << "Connection failed: " << strerror(errno) << std::endl;
-        close(m_socket);
-        m_socket = -1;
-        m_connected = false;
-        return;
-    }
-
-    std::cout << "Connection established successfully!" << std::endl;
-    m_connected = true;
-
-    // Assign unique IDs to nodes using an infix traversal
-    uint32_t next_id = 0;
-    assignNodeIds(m_behavior_tree.getRoot(), next_id);
-
-    // Send the tree structure
-    sendTreeStructure();
-}
-
-// ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::sendTreeStructure()
-{
-    std::cout << "Sending the tree structure in YAML..." << std::endl;
-
-    try {
-        // Generate the YAML representation of the tree
-        std::string yaml_tree = TreeExporter::toYAML(m_behavior_tree, &m_node_to_id);
-
-        // Clear the buffer
-        m_buffer.clear();
-        m_buffer.reserve(yaml_tree.length() + sizeof(uint32_t) + sizeof(uint8_t));
-
-        // Message type
-        m_buffer.push_back(static_cast<uint8_t>(MessageType::TREE_STRUCTURE));
-
-        // YAML string length
-        uint32_t yaml_length = static_cast<uint32_t>(yaml_tree.length());
-        m_buffer.insert(m_buffer.end(),
-                     reinterpret_cast<const uint8_t*>(&yaml_length),
-                     reinterpret_cast<const uint8_t*>(&yaml_length) + sizeof(yaml_length));
-
-        // YAML string content
-        m_buffer.insert(m_buffer.end(), yaml_tree.begin(), yaml_tree.end());
-
-        // Send the message
-        ssize_t sent_bytes = send(m_socket, m_buffer.data(), m_buffer.size(), 0);
-        if (sent_bytes <= 0)
+        // Attempt connection
+        if (::connect(m_socket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) == 0)
         {
-            std::cerr << "Error sending the YAML structure: " << strerror(errno) << std::endl;
-            m_connected = false;
+            // Assign unique IDs to nodes using an infix traversal
+            uint32_t next_id = 0;
+            std::cout << "Assigning node IDs" << std::endl;
+            assignNodeIds(&m_behavior_tree.getRoot(), next_id);
+
+            // Send the tree structure
+            if (auto ec = sendTreeStructure())
+            {
+                close(m_socket);
+                m_socket = -1;
+                m_connected = false;
+                return ec;
+            }
+
+            // Start the worker thread
+            m_running = m_connected = true;
+            m_worker_thread = std::thread(&BehaviorTreeVisualizer::workerThread, this);
+            return std::error_code(); // Success
+        }
+
+        // Check if it is a connection error or a real error
+        else if ((errno == EINPROGRESS) ||
+                 (errno == EALREADY) ||
+                 (errno == EINTR))
+        {
             close(m_socket);
             m_socket = -1;
+            return make_error_code(visualizer_errc::connection_failed);
         }
         else
         {
-            std::cout << "Tree structure sent in YAML (" << sent_bytes << " bytes)" << std::endl;
-            m_tree_structure_sent = true;
+            // Check the timeout
+            auto current_time = std::chrono::steady_clock::now();
+            if (current_time - start_time > p_timeout)
+            {
+                close(m_socket);
+                m_socket = -1;
+                return make_error_code(visualizer_errc::connection_timeout);
+            }
+
+            // Small pause to avoid overloading the CPU
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
-    catch (const std::exception& e)
+
+    return std::error_code();
+}
+
+// ----------------------------------------------------------------------------
+bool BehaviorTreeVisualizer::tick()
+{
+    // Check if we are connected and if the tree structure has been sent
+    if (!m_connected || !m_running || !m_tree_structure_sent)
+        return false;
+
+    // Create a status update
+    StatusUpdate update;
+
+    // Capture the state of all nodes in the tree
+    captureNodeStates(&m_behavior_tree.getRoot(), update);
+
+    // Add the update to the queue for sending by the worker thread
+    if (!update.states.empty())
     {
-        std::cerr << "Exception generating or sending the YAML: " << e.what() << std::endl;
-        m_connected = false;
-        close(m_socket);
-        m_socket = -1;
+        std::lock_guard<std::mutex> lock(m_queue_mutex);
+        m_status_queue.push(std::move(update));
+    }
+
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+std::error_code BehaviorTreeVisualizer::sendTreeStructure()
+{
+    if (m_socket < 0)
+    {
+        return make_error_code(visualizer_errc::invalid_socket);
+    }
+
+    try
+    {
+        Serializer serializer;
+
+        // Message type
+        serializer << static_cast<uint8_t>(MessageType::TREE_STRUCTURE);
+
+        // Generate the YAML representation of the tree
+        serializer << TreeExporter::toYAML(m_behavior_tree);
+
+        // Send the message
+        ssize_t sent_bytes = send(m_socket, serializer.data(), serializer.size(), 0);
+        if (sent_bytes <= 0)
+        {
+            m_tree_structure_sent = false;
+            return make_error_code(visualizer_errc::send_failed);
+        }
+
+        m_tree_structure_sent = true;
+        return std::error_code();
+    }
+    catch (const std::exception&)
+    {
+        m_tree_structure_sent = false;
+        return make_error_code(visualizer_errc::serialization_failed);
     }
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::assignNodeIds(bt::Node::Ptr p_node, uint32_t& p_next_id)
+void BehaviorTreeVisualizer::assignNodeIds(bt::Node const* p_node, uint32_t& p_next_id)
 {
-    if (!p_node)
-        return;
+    assert(p_node != nullptr);
 
-    // Infix traversal: first the children, then the current node
+    // Assign an ID to the current node
+    m_ids[p_node] = p_next_id;
+    std::cout << "Node ID: " << p_next_id << " Name: " << p_node->name << std::endl;
+    p_next_id++;
 
     // Process the children first if it is a composite node
-    if (auto composite = std::dynamic_pointer_cast<Composite>(p_node))
+    if (auto composite = dynamic_cast<Composite const*>(p_node))
     {
         for (auto const& child : composite->getChildren())
         {
-            assignNodeIds(child, p_next_id);
+            assignNodeIds(child.get(), p_next_id);
         }
     }
     // Process the child if it is a decorator node
-    else if (auto decorator = std::dynamic_pointer_cast<Decorator>(p_node))
+    else if (auto decorator = dynamic_cast<Decorator const*>(p_node))
     {
-        if (decorator->getChild())
+        if (decorator->hasChild())
         {
-            assignNodeIds(decorator->getChild(), p_next_id);
+            assignNodeIds(&(decorator->getChild()), p_next_id);
         }
     }
-
-    // Assign an ID to the current node
-    m_node_to_id[p_node.get()] = p_next_id++;
-
-    std::cout << "Node '" << p_node->name << "' assigned to ID " << m_node_to_id[p_node.get()] << std::endl;
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::captureNodeStates(bt::Node::Ptr p_node, StatusUpdate& p_update)
+void BehaviorTreeVisualizer::captureNodeStates(bt::Node const* p_node, StatusUpdate& p_update)
 {
-    if (!p_node)
-        return;
-
     // Get the ID of the node
-    auto it = m_node_to_id.find(p_node.get());
-    if (it != m_node_to_id.end())
+    auto it = m_ids.find(p_node);
+    if (it != m_ids.end())
     {
         // Add the node status to the update
         p_update.states.emplace_back(it->second, p_node->getStatus());
     }
 
-    // Recursively process the children
-
     // Process the children if it is a composite node
-    if (auto composite = std::dynamic_pointer_cast<Composite>(p_node))
+    if (auto composite = dynamic_cast<Composite const*>(p_node))
     {
         for (auto const& child : composite->getChildren())
         {
-            captureNodeStates(child, p_update);
+            captureNodeStates(child.get(), p_update);
         }
     }
     // Process the child if it is a decorator node
-    else if (auto decorator = std::dynamic_pointer_cast<Decorator>(p_node))
+    else if (auto decorator = dynamic_cast<Decorator const*>(p_node))
     {
-        if (decorator->getChild())
+        if (decorator->hasChild())
         {
-            captureNodeStates(decorator->getChild(), p_update);
+            captureNodeStates(&(decorator->getChild()), p_update);
         }
     }
 }
@@ -242,15 +261,6 @@ void BehaviorTreeVisualizer::workerThread()
     // Main loop of the thread
     while (m_running)
     {
-        // If we are not connected, try to connect
-        if (!m_connected)
-        {
-            std::cout << "Not connected, trying to reconnect..." << std::endl;
-            connect();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            continue;
-        }
-
         // Get all the pending updates
         std::vector<StatusUpdate> updates;
         {
@@ -266,10 +276,6 @@ void BehaviorTreeVisualizer::workerThread()
         for (const auto& update : updates)
         {
             sendStatusUpdate(update);
-
-            // If the sending failed and we are disconnected, exit the loop
-            if (!m_connected)
-                break;
         }
 
         // Wait a short instant before the next iteration
@@ -280,55 +286,47 @@ void BehaviorTreeVisualizer::workerThread()
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::sendStatusUpdate(const StatusUpdate& p_update)
+std::error_code BehaviorTreeVisualizer::sendStatusUpdate(const StatusUpdate& p_update)
 {
-    // Do nothing if the update is empty
+    // Check if the update is empty
     if (p_update.states.empty())
-        return;
+    {
+        return make_error_code(visualizer_errc::empty_update);
+    }
 
-    std::cout << "Sending the state update for " << p_update.states.size() << " nodes" << std::endl;
+    // Check if socket is valid
+    if (m_socket < 0)
+    {
+        return make_error_code(visualizer_errc::invalid_socket);
+    }
 
-    try {
-        // Clear the buffer
-        m_buffer.clear();
+    try
+    {
+        Serializer serializer;
 
         // Message type
-        m_buffer.push_back(static_cast<uint8_t>(MessageType::STATE_UPDATE));
+        serializer << static_cast<uint8_t>(MessageType::STATE_UPDATE);
 
         // Number of state updates
-        uint32_t count = static_cast<uint32_t>(p_update.states.size());
-        m_buffer.insert(m_buffer.end(),
-                     reinterpret_cast<uint8_t*>(&count),
-                     reinterpret_cast<uint8_t*>(&count) + sizeof(count));
+        serializer << static_cast<uint32_t>(p_update.states.size());
 
         // Add each state update (ID, status)
         for (const auto& [id, status] : p_update.states)
         {
-            // Node ID
-            m_buffer.insert(m_buffer.end(),
-                         reinterpret_cast<const uint8_t*>(&id),
-                         reinterpret_cast<const uint8_t*>(&id) + sizeof(id));
-
-            // Node status
-            uint8_t status_value = static_cast<uint8_t>(status);
-            m_buffer.push_back(status_value);
+            serializer << id << static_cast<uint8_t>(status);
         }
 
         // Send the message
-        if (send(m_socket, m_buffer.data(), m_buffer.size(), 0) <= 0)
+        if (send(m_socket, serializer.data(), serializer.size(), 0) <= 0)
         {
-            std::cerr << "Error sending the state update: " << strerror(errno) << std::endl;
-            m_connected = false;
-            close(m_socket);
-            m_socket = -1;
+            return make_error_code(visualizer_errc::send_failed);
         }
+
+        return std::error_code();
     }
-    catch (const std::exception& e) 
+    catch (const std::exception&)
     {
-        std::cerr << "Exception sending the state update: " << e.what() << std::endl;
-        m_connected = false;
-        close(m_socket);
-        m_socket = -1;
+        return make_error_code(visualizer_errc::serialization_failed);
     }
 }
 

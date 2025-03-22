@@ -26,22 +26,22 @@
 
 #include "BehaviorTree/TreeBuilder.hpp"
 #include <yaml-cpp/yaml.h>
-//#include <tinyxml2.h>
 
 namespace bt {
 
-std::unique_ptr<Tree> TreeBuilder::fromYAML(std::string const& filename)
+// ----------------------------------------------------------------------------
+std::unique_ptr<Tree> TreeBuilder::fromFile(NodeFactory const& p_factory, std::string const& p_file_path)
 {
     try
     {
-        YAML::Node root = YAML::LoadFile(filename);
+        YAML::Node root = YAML::LoadFile(p_file_path);
         if (!root["behavior_tree"])
         {
             throw std::runtime_error("Missing 'behavior_tree' node in YAML");
         }
 
         auto tree = std::make_unique<Tree>();
-        tree->setRoot(parseYAMLNode(root["behavior_tree"]));
+        tree->setRoot(parseYAMLNode(p_factory, root["behavior_tree"]));
         return tree;
     }
     catch (const YAML::Exception& e)
@@ -50,18 +50,19 @@ std::unique_ptr<Tree> TreeBuilder::fromYAML(std::string const& filename)
     }
 }
 
-std::unique_ptr<Tree> TreeBuilder::fromText(std::string const& yaml_text)
+// ----------------------------------------------------------------------------
+std::unique_ptr<Tree> TreeBuilder::fromText(NodeFactory const& p_factory, std::string const& p_yaml_text)
 {
     try
     {
-        YAML::Node root = YAML::Load(yaml_text);
+        YAML::Node root = YAML::Load(p_yaml_text);
         if (!root["behavior_tree"])
         {
             throw std::runtime_error("Missing 'behavior_tree' node in YAML text");
         }
 
         auto tree = std::make_unique<Tree>();
-        tree->setRoot(parseYAMLNode(root["behavior_tree"]));
+        tree->setRoot(parseYAMLNode(p_factory, root["behavior_tree"]));
         return tree;
     }
     catch (const YAML::Exception& e)
@@ -70,9 +71,10 @@ std::unique_ptr<Tree> TreeBuilder::fromText(std::string const& yaml_text)
     }
 }
 
-Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
+// ----------------------------------------------------------------------------
+Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory, YAML::Node const& p_node)
 {
-    if (!node.IsMap())
+    if (!p_node.IsMap())
     {
         throw std::runtime_error("Invalid node format: must be a map");
     }
@@ -81,7 +83,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
     YAML::Node node_content;
 
     // Find the type and content of the node
-    for (const auto& it : node)
+    for (const auto& it : p_node)
     {
         type = it.first.as<std::string>();
         std::transform(type.begin(), type.end(), type.begin(), ::tolower);
@@ -120,7 +122,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
         }
         for (auto const& child : node_content["children"])
         {
-            seq->addChild(parseYAMLNode(child));
+            seq->addChild(parseYAMLNode(p_factory, child));
         }
         return seq;
     }
@@ -149,7 +151,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
         }
         for (auto const& child : node_content["children"])
         {
-            sel->addChild(parseYAMLNode(child));
+            sel->addChild(parseYAMLNode(p_factory, child));
         }
         return sel;
     }
@@ -208,7 +210,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
         }
         for (const auto& child : node_content["children"])
         {
-            reinterpret_cast<Composite*>(par.get())->addChild(parseYAMLNode(child));
+            reinterpret_cast<Composite*>(par.get())->addChild(parseYAMLNode(p_factory, child));
         }
         return par;
     }
@@ -236,7 +238,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
         {
             throw std::runtime_error("Decorator must have exactly one child");
         }
-        inv->setChild(parseYAMLNode(node_content["child"][0]));
+        inv->setChild(parseYAMLNode(p_factory, node_content["child"][0]));
         return inv;
     }
     else if (type == "retry")
@@ -264,7 +266,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
         {
             throw std::runtime_error("Decorator must have exactly one child");
         }
-        retry->setChild(parseYAMLNode(node_content["child"][0]));
+        retry->setChild(parseYAMLNode(p_factory, node_content["child"][0]));
         return retry;
     }
     else if (type == "repeat")
@@ -292,7 +294,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
         {
             throw std::runtime_error("Decorator must have exactly one child");
         }
-        repeat->setChild(parseYAMLNode(node_content["child"][0]));
+        repeat->setChild(parseYAMLNode(p_factory, node_content["child"][0]));
         return repeat;
     }
     else if (type == "repeat_until_success")
@@ -318,7 +320,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
         {
             throw std::runtime_error("Decorator must have exactly one child");
         }
-        rep->setChild(parseYAMLNode(node_content["child"][0]));
+        rep->setChild(parseYAMLNode(p_factory, node_content["child"][0]));
         return rep;
     }
     else if (type == "repeat_until_failure")
@@ -344,7 +346,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
         {
             throw std::runtime_error("Decorator must have exactly one child");
         }
-        rep->setChild(parseYAMLNode(node_content["child"][0]));
+        rep->setChild(parseYAMLNode(p_factory, node_content["child"][0]));
         return rep;
     }
 
@@ -356,7 +358,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
             throw std::runtime_error("Action node missing 'name' field");
         }
         std::string action_name = node_content["name"].as<std::string>();
-        auto action = m_factory->createNode(action_name);
+        auto action = p_factory.createNode(action_name);
         if (!action)
         {
             throw std::runtime_error("Failed to create action node: " + action_name);
@@ -377,7 +379,7 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
             throw std::runtime_error("Condition node missing 'name' field");
         }
         std::string condition_name = node_content["name"].as<std::string>();
-        auto condition = m_factory->createNode(condition_name);
+        auto condition = p_factory.createNode(condition_name);
         if (!condition)
         {
             throw std::runtime_error("Failed to create condition node: " + condition_name);
@@ -393,102 +395,6 @@ Node::Ptr TreeBuilder::parseYAMLNode(YAML::Node const& node)
     }
 
     throw std::runtime_error("Unknown node type: " + type);
-}
-
-std::string TreeBuilder::toMermaid(Tree const& tree)
-{
-    std::string result = "graph TD\n";
-    
-    // Définir les styles pour chaque type de nœud avec classDef
-    result += "    classDef sequence fill:#b3e0ff,stroke:#0066cc,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef selector fill:#ffcccc,stroke:#cc0000,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef parallel fill:#d9b3ff,stroke:#6600cc,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef decorator fill:#ffffb3,stroke:#cccc00,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef condition fill:#b3ffb3,stroke:#00cc00,stroke-width:2px,color:#000000,font-weight:bold\n";
-    result += "    classDef action fill:#ffb3d9,stroke:#cc0066,stroke-width:2px,color:#000000,font-weight:bold\n";
-    
-    size_t counter = 0;
-    
-    if (tree.getRoot() != nullptr)
-    {
-        generateMermaidNode(tree.getRoot().get(), 0, counter, result);
-    }
-    
-    return result;
-}
-
-void TreeBuilder::generateMermaidNode(Node const* node, size_t parent_id,
-                                    size_t& counter, std::string& result)
-{
-    if (node == nullptr)
-        return;
-
-    size_t current_id = ++counter;
-    std::string node_name = node->name;
-    std::string node_class = "";
-    
-    // Déterminer le type de nœud et la classe correspondante
-    if (dynamic_cast<Sequence const*>(node))
-    {
-        node_class = "sequence";
-    }
-    else if (dynamic_cast<Selector const*>(node))
-    {
-        node_class = "selector";
-    }
-    else if (dynamic_cast<Parallel const*>(node) || dynamic_cast<ParallelAll const*>(node))
-    {
-        node_class = "parallel";
-    }
-    else if (dynamic_cast<Inverter const*>(node) || 
-             dynamic_cast<Retry const*>(node) || 
-             dynamic_cast<Repeat const*>(node) ||
-             dynamic_cast<UntilSuccess const*>(node) ||
-             dynamic_cast<UntilFailure const*>(node))
-    {
-        node_class = "decorator";
-    }
-    else if (dynamic_cast<Condition const*>(node))
-    {
-        node_class = "condition";
-    }
-    else if (dynamic_cast<Action const*>(node))
-    {
-        node_class = "action";
-    }
-    
-    // Ajouter la définition du nœud
-    result += "    node" + std::to_string(current_id) + "[\"" + node_name + "\"]\n";
-    
-    // Appliquer la classe au nœud
-    if (!node_class.empty())
-    {
-        result += "    class node" + std::to_string(current_id) + " " + node_class + "\n";
-    }
-    
-    // Ajouter la connexion au parent (si ce n'est pas la racine)
-    if (parent_id > 0)
-    {
-        result += "    node" + std::to_string(parent_id) + " --> node" +
-                 std::to_string(current_id) + "\n";
-    }
-    
-    // Traiter les enfants pour les nœuds composites
-    if (auto composite = dynamic_cast<Composite const*>(node))
-    {
-        for (auto const& child : composite->getChildren())
-        {
-            generateMermaidNode(child.get(), current_id, counter, result);
-        }
-    }
-    // Traiter l'enfant pour les nœuds décorateurs
-    else if (auto decorator = dynamic_cast<Decorator const*>(node))
-    {
-        if (auto child = decorator->getChild())
-        {
-            generateMermaidNode(child.get(), current_id, counter, result);
-        }
-    }
 }
 
 } // namespace bt

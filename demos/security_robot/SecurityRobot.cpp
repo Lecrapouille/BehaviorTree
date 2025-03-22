@@ -156,11 +156,11 @@ void runDemo()
     blackboard->set<bool>("threat_detected", false);
 
     // Create the factory with custom actions
-    auto factory = std::make_shared<SecurityRobotFactory>(blackboard);
-    bt::TreeBuilder builder(factory);
+    SecurityRobotFactory factory(blackboard);
+    bt::TreeBuilder builder;
 
     // Load the tree from the YAML file
-    auto tree = builder.fromYAML("demos/security_robot/security_robot.yaml");
+    auto tree = builder.fromFile(factory, "demos/security_robot/security_robot.yaml");
     if (!tree)
     {
         std::cerr << "Failed to load behavior tree from YAML\n";
@@ -168,13 +168,11 @@ void runDemo()
     }
 
     // Initialize the connection with the visualizer
-    BehaviorTreeVisualizer visualizer(*tree, "127.0.0.1", 9090);
-    int connection_attempts = 0;
-    while (!visualizer.isConnected() && connection_attempts < 3)
+    BehaviorTreeVisualizer visualizer(*tree); // TODO: observer ?
+    if (auto ec = visualizer.connect("127.0.0.1", 9090, std::chrono::seconds(5)))
     {
-        std::cout << "Waiting to connect to the visualizer application on port 9090...\n";
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        connection_attempts++;
+        std::cerr << "Failed to connect to the visualizer: " << ec.message() << std::endl;
+        return;
     }
 
     // Simulation
@@ -188,21 +186,23 @@ void runDemo()
         if (i == 5) blackboard->set<int>("battery_level", 10);
         if (i == 10) blackboard->set<bool>("threat_detected", false);
 
-        // Tick the tree
+        // Update the tree
         tree->tick();
 
         // Update the visualizer
-        if (visualizer.isConnected())
-        {
-            visualizer.updateDebugInfo();
-        }
+        visualizer.tick(); // TODO: hidden by an observer pattern ?
         
-        // Commentaire : Attendre une seconde avant le prochain tick
-        // std::this_thread::sleep_for(std::chrono::seconds(1));
+        // Wait for the next tick
+#if 0
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+#else
         std::string input;
-        std::cout << "Appuyez sur Entrée pour continuer..." << std::endl;
+        std::cout << "Press Enter to continue..." << std::endl;
         std::getline(std::cin, input);
+#endif
     }
+
+    visualizer.disconnect();
 }
 
 } // namespace demo
