@@ -27,7 +27,7 @@
 #pragma once
 
 #include "ArcShape.hpp"
-#include "BehaviorTree/BehaviorTreeVisualizer.hpp"
+#include "BehaviorTree/Visualizer.hpp"
 #include "NodeShape.hpp"
 
 #include <SFML/Graphics.hpp>
@@ -137,10 +137,13 @@ private:
 
     // ------------------------------------------------------------------------
     //! \brief Set node icon.
-    //! \param[in] p_nodeShape Node to configure.
+    //! \param[in] p_node_shape Node to configure.
     //! \param[in] p_name Node name.
+    //! \param[in] p_scale Icon scale.
     // ------------------------------------------------------------------------
-    void setNodeIcon(NodeShape* p_nodeShape, const char* p_name) const;
+    void setNodeIcon(NodeShape* p_node_shape,
+                     const char* p_name,
+                     float p_scale) const;
 
     // ------------------------------------------------------------------------
     //! \brief Draw a node.

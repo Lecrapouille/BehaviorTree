@@ -143,9 +143,9 @@ private:
     //! \brief Background of the node.
     sf::RectangleShape m_background;
     //! \brief Gradient vertices.
-    sf::Vertex m_gradientVertices[4];
+    sf::Vertex m_gradient_vertices[4];
     //! \brief Rounded rectangle.
-    sf::VertexArray m_roundedRectangle{sf::TriangleFan};
+    sf::VertexArray m_rounded_rectangle{sf::TriangleFan};
     //! \brief Border.
     sf::VertexArray m_border{sf::TriangleStrip};
     //! \brief Padding.

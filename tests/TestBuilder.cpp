@@ -1,5 +1,5 @@
-#include "BehaviorTree/TreeBuilder.hpp"
-#include "BehaviorTree/TreeExporter.hpp"
+#include "BehaviorTree/Builder.hpp"
+#include "BehaviorTree/Exporter.hpp"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -10,9 +10,9 @@
 namespace bt {
 
 // ****************************************************************************
-//! \brief Fixture pour les tests de TreeBuilder
+//! \brief Fixture pour les tests de Builder
 // ****************************************************************************
-class TreeBuilderTest: public ::testing::Test
+class BuilderTest: public ::testing::Test
 {
 protected:
 
@@ -56,7 +56,7 @@ protected:
                                 []() { return Status::FAILURE; });
         factory->registerAction("Idle", []() { return Status::RUNNING; });
 
-        builder = std::make_unique<TreeBuilder>(factory);
+        builder = std::make_unique<Builder>(factory);
         tree = builder->fromText(yaml_tree);
     }
 
@@ -64,7 +64,7 @@ protected:
 
     std::string yaml_tree;
     std::shared_ptr<NodeFactory> factory;
-    std::unique_ptr<TreeBuilder> builder;
+    std::unique_ptr<Builder> builder;
     std::unique_ptr<Tree> tree;
 };
 
@@ -73,7 +73,7 @@ protected:
 //! \details Tests the creation of a basic behavior tree with a sequence node
 //! containing an action and a condition node.
 // ****************************************************************************
-TEST_F(TreeBuilderTest, LoadSimpleYAMLTree)
+TEST_F(BuilderTest, LoadSimpleYAMLTree)
 {
     ASSERT_NE(tree, nullptr);
     EXPECT_EQ(tree->isValid(), true);
@@ -139,10 +139,10 @@ TEST_F(TreeBuilderTest, LoadSimpleYAMLTree)
     EXPECT_EQ(idle->name, "Idle");
 
     // Test of the YAML export
-    auto yaml_content = bt::TreeExporter::toYAML(*tree);
+    auto yaml_content = bt::Exporter::toYAML(*tree);
     EXPECT_EQ(yaml_content, yaml_tree);
 
-    EXPECT_EQ(bt::TreeExporter::toYAMLFile(*tree, "/tmp/test.yaml"), true);
+    EXPECT_EQ(bt::Exporter::toYAMLFile(*tree, "/tmp/test.yaml"), true);
     std::ifstream file("/tmp/test.yaml");
     ASSERT_TRUE(file.is_open()) << "Impossible to open the YAML file";
     std::stringstream buffer;
@@ -156,7 +156,7 @@ TEST_F(TreeBuilderTest, LoadSimpleYAMLTree)
 //! \details Verifies that the toMermaid method generates a correct Mermaid
 //! diagram representing the behavior tree.
 // ****************************************************************************
-TEST_F(TreeBuilderTest, TestToMermaid)
+TEST_F(BuilderTest, TestToMermaid)
 {
     ASSERT_NE(tree, nullptr);
     EXPECT_EQ(tree->isValid(), true);

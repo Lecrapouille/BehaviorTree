@@ -24,7 +24,8 @@
 // SOFTWARE.
 //*****************************************************************************
 
-#include "BehaviorTree/TreeExporter.hpp"
+#include "BehaviorTree/Exporter.hpp"
+
 #include <fstream>
 #include <sstream>
 #include <yaml-cpp/yaml.h>
@@ -45,7 +46,7 @@ static bool writeToFile(std::string const& content, std::string const& filename)
 }
 
 // ----------------------------------------------------------------------------
-std::string TreeExporter::toYAML(Tree const& tree)
+std::string Exporter::toYAML(Tree const& tree)
 {
     if (!tree.hasRoot())
         return {};
@@ -56,13 +57,13 @@ std::string TreeExporter::toYAML(Tree const& tree)
 }
 
 // ----------------------------------------------------------------------------
-bool TreeExporter::toYAMLFile(Tree const& tree, std::string const& filename)
+bool Exporter::toYAMLFile(Tree const& tree, std::string const& filename)
 {
     return writeToFile<YAML::Node>(toYAML(tree), filename);
 }
 
 // ----------------------------------------------------------------------------
-std::string TreeExporter::toBTCppXML(Tree const& tree)
+std::string Exporter::toBTCppXML(Tree const& tree)
 {
     std::stringstream xml;
     xml << "<?xml version=\"1.0\" ?>" << std::endl;
@@ -80,13 +81,13 @@ std::string TreeExporter::toBTCppXML(Tree const& tree)
 }
 
 // ----------------------------------------------------------------------------
-bool TreeExporter::toBTCppXMLFile(Tree const& tree, std::string const& filename)
+bool Exporter::toBTCppXMLFile(Tree const& tree, std::string const& filename)
 {
     return writeToFile<std::stringstream>(toBTCppXML(tree), filename);
 }
 
 // ----------------------------------------------------------------------------
-YAML::Node TreeExporter::generateYAMLNode(Node const* node)
+YAML::Node Exporter::generateYAMLNode(Node const* node)
 {
     YAML::Node yaml_node;
 
@@ -254,9 +255,9 @@ YAML::Node TreeExporter::generateYAMLNode(Node const* node)
 }
 
 // ----------------------------------------------------------------------------
-void TreeExporter::generateBTCppXML(Node const* node,
-                                    std::stringstream& xml,
-                                    int indent)
+void Exporter::generateBTCppXML(Node const* node,
+                                std::stringstream& xml,
+                                int indent)
 {
     std::string spaces(static_cast<size_t>(indent), ' ');
 
@@ -333,7 +334,7 @@ void TreeExporter::generateBTCppXML(Node const* node,
 }
 
 // ----------------------------------------------------------------------------
-std::string TreeExporter::toMermaid(Tree const& tree)
+std::string Exporter::toMermaid(Tree const& tree)
 {
     std::string result = "graph TD\n";
 
@@ -367,10 +368,10 @@ std::string TreeExporter::toMermaid(Tree const& tree)
 }
 
 // ----------------------------------------------------------------------------
-void TreeExporter::generateMermaidNode(Node const* node,
-                                       size_t parent_id,
-                                       size_t& counter,
-                                       std::string& result)
+void Exporter::generateMermaidNode(Node const* node,
+                                   size_t parent_id,
+                                   size_t& counter,
+                                   std::string& result)
 {
     if (node == nullptr)
         return;

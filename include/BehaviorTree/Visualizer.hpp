@@ -27,7 +27,7 @@
 #pragma once
 
 #include "BehaviorTree/BehaviorTree.hpp"
-#include "BehaviorTree/TreeExporter.hpp"
+#include "BehaviorTree/Exporter.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -62,7 +62,7 @@ enum class visualizer_errc
 };
 
 // ****************************************************************************
-//! \brief Error category for BehaviorTreeVisualizer errors
+//! \brief Error category for Visualizer errors
 // ****************************************************************************
 class visualizer_error_category: public std::error_category
 {
@@ -130,7 +130,7 @@ inline std::error_code make_error_code(visualizer_errc e) noexcept
 //! Communication is handled through a dedicated thread to avoid blocking
 //! the behavior tree execution.
 // ****************************************************************************
-class BehaviorTreeVisualizer
+class Visualizer
 {
 public:
 
@@ -166,7 +166,7 @@ public:
     //! Initializes the internal state but does not start the communication.
     //! Use connect() to establish the connection with the visualizer.
     // ------------------------------------------------------------------------
-    explicit BehaviorTreeVisualizer(Tree const& p_tree);
+    explicit Visualizer(Tree const& p_tree);
 
     // ------------------------------------------------------------------------
     //! \brief Destructor.
@@ -174,7 +174,7 @@ public:
     //! Properly stops the communication thread and closes the socket
     //! connection with the client.
     // ------------------------------------------------------------------------
-    ~BehaviorTreeVisualizer();
+    ~Visualizer();
 
     // ------------------------------------------------------------------------
     //! \brief Connects to the visualizer and starts the communication thread.
@@ -224,7 +224,7 @@ private:
     //! \return std::error_code indicating success or the specific error that
     //! occurred.
     //!
-    //! Converts the tree structure to YAML using TreeExporter and
+    //! Converts the tree structure to YAML using Exporter and
     //! sends it to the connected client.
     // ------------------------------------------------------------------------
     std::error_code sendTreeStructure();

@@ -39,9 +39,9 @@ NodeShape::NodeShape()
     m_background.setOutlineThickness(0);
 
     // Initialize the gradient
-    for (int i = 0; i < 4; ++i)
+    for (auto& vertex : m_gradient_vertices)
     {
-        m_gradientVertices[i].color = sf::Color::Transparent;
+        vertex.color = sf::Color::Transparent;
     }
 
     // Initialize default colors
@@ -54,22 +54,22 @@ NodeShape::NodeShape()
 }
 
 // ----------------------------------------------------------------------------
-void NodeShape::setCornerRadius(float radius)
+void NodeShape::setCornerRadius(float p_radius)
 {
-    m_radius = radius;
+    m_radius = p_radius;
     updateGeometry();
 }
 
 // ----------------------------------------------------------------------------
-void NodeShape::setText(const std::string& text,
-                        const sf::Font& font,
-                        unsigned int charSize)
+void NodeShape::setText(const std::string& p_text,
+                        const sf::Font& p_font,
+                        unsigned int p_char_size)
 {
     // Create a new text rather than modifying the existing one
     m_text = sf::Text();
-    m_text.setString(text);
-    m_text.setFont(font);
-    m_text.setCharacterSize(charSize);
+    m_text.setString(p_text);
+    m_text.setFont(p_font);
+    m_text.setCharacterSize(p_char_size);
 
     // Force the white color and disable any outline
     m_text.setFillColor(sf::Color::White);
@@ -81,29 +81,29 @@ void NodeShape::setText(const std::string& text,
 }
 
 // ----------------------------------------------------------------------------
-void NodeShape::setIcon(const sf::Texture& texture, float scale)
+void NodeShape::setIcon(const sf::Texture& p_texture, float p_scale)
 {
-    m_icon.setTexture(texture);
-    m_icon.setScale(scale, scale);
+    m_icon.setTexture(p_texture);
+    m_icon.setScale(p_scale, p_scale);
     m_icon.setColor(sf::Color::White);
     updateGeometry();
 }
 
 // ----------------------------------------------------------------------------
-void NodeShape::setColors(const sf::Color& mainColor,
-                          const sf::Color& secondaryColor,
-                          const sf::Color& borderColor)
+void NodeShape::setColors(const sf::Color& p_main_color,
+                          const sf::Color& p_secondary_color,
+                          const sf::Color& p_border_color)
 {
     // Gradient colors and border color
-    m_mainColor = mainColor;
-    m_secondaryColor = secondaryColor;
-    m_borderColor = borderColor;
+    m_mainColor = p_main_color;
+    m_secondaryColor = p_secondary_color;
+    m_borderColor = p_border_color;
 
     // Update gradient colors
-    m_gradientVertices[0].color = mainColor;
-    m_gradientVertices[1].color = mainColor;
-    m_gradientVertices[2].color = secondaryColor;
-    m_gradientVertices[3].color = secondaryColor;
+    m_gradient_vertices[0].color = p_main_color;
+    m_gradient_vertices[1].color = p_main_color;
+    m_gradient_vertices[2].color = p_secondary_color;
+    m_gradient_vertices[3].color = p_secondary_color;
 
     // Update rounded rectangle colors
     updateRoundedRectangle();
@@ -111,15 +111,15 @@ void NodeShape::setColors(const sf::Color& mainColor,
 }
 
 // ----------------------------------------------------------------------------
-void NodeShape::setTextSmoothing(bool smooth)
+void NodeShape::setTextSmoothing(bool p_smooth)
 {
-    m_textSmoothing = smooth;
+    m_textSmoothing = p_smooth;
 
     // If the text exists, update its properties
     if (m_text.getFont() != nullptr)
     {
         // Adjust the text rendering quality
-        if (smooth)
+        if (p_smooth)
         {
             // Add a slight outline of the same color to improve smoothing
             m_text.setOutlineThickness(0.5f);
@@ -133,42 +133,49 @@ void NodeShape::setTextSmoothing(bool smooth)
 }
 
 // ----------------------------------------------------------------------------
-void NodeShape::setPadding(float horizontal, float vertical)
+void NodeShape::setPadding(float p_horizontal, float p_vertical)
 {
-    m_padding = {horizontal, vertical};
+    m_padding = {p_horizontal, p_vertical};
     updateGeometry();
 }
 
 // ----------------------------------------------------------------------------
-void NodeShape::draw(sf::RenderTarget& target, sf::RenderStates states) const
+void NodeShape::draw(sf::RenderTarget& p_target,
+                     sf::RenderStates p_states) const
 {
-    states.transform *= getTransform();
+    p_states.transform *= getTransform();
 
     // Draw the rounded rectangle with gradient
-    target.draw(m_roundedRectangle, states);
+    p_target.draw(m_rounded_rectangle, p_states);
 
     // Draw the cyan border
-    target.draw(m_border, states);
+    p_target.draw(m_border, p_states);
 
     // Draw the icon if available
     if (m_icon.getTexture())
     {
-        target.draw(m_icon, states);
+        p_target.draw(m_icon, p_states);
     }
 
     // Draw the text only if it has a valid font
     if (m_text.getFont())
     {
-        target.draw(m_text, states);
+        p_target.draw(m_text, p_states);
     }
 }
 
 // ----------------------------------------------------------------------------
 void NodeShape::updateGeometry()
 {
+    // Space between the icon and the text
+    const float ICON_TEXT_SPACING = 15.0f;
+
     // Default dimensions if no text
-    float width = 100.0f;
-    float height = 40.0f;
+    const float MIN_WIDTH = 100.0f;
+    const float MIN_HEIGHT = 40.0f;
+
+    float width = MIN_WIDTH;
+    float height = MIN_HEIGHT;
 
     // Calculate dimensions if the text has a valid font
     if (m_text.getFont())
@@ -181,18 +188,17 @@ void NodeShape::updateGeometry()
         if (m_icon.getTexture())
         {
             iconBounds = m_icon.getGlobalBounds();
-            iconWidth = iconBounds.width +
-                        15.0f; // Espacement entre l'icône et le texte
+            iconWidth = iconBounds.width + ICON_TEXT_SPACING;
         }
 
         // Calculate the width and height with appropriate spacing
-        width = textBounds.width + iconWidth + m_padding.x * 2;
-        height =
-            std::max(textBounds.height, iconBounds.height) + m_padding.y * 2;
+        width = textBounds.width + iconWidth + m_padding.x * 2.0f;
+        height = std::max(textBounds.height, iconBounds.height);
+        height += m_padding.y * 2.0f;
 
         // Minimum dimensions
-        width = std::max(width, 100.0f);
-        height = std::max(height, 40.0f);
+        width = std::max(width, MIN_WIDTH);
+        height = std::max(height, MIN_HEIGHT);
 
         // Center the text vertically and position after the icon
         m_text.setOrigin(0, textBounds.top + textBounds.height / 2.0f);
@@ -226,10 +232,10 @@ void NodeShape::updateRoundedRectangle()
     radius = std::min(radius, std::min(width / 2.0f, height / 2.0f));
 
     // Reset the rounded rectangle
-    m_roundedRectangle.clear();
+    m_rounded_rectangle.clear();
 
     // Add the center point for the triangle fan
-    m_roundedRectangle.append(
+    m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(width / 2.0f, height / 2.0f),
                    interpolateColor(m_mainColor, m_secondaryColor, 0.5f)));
 
@@ -246,12 +252,13 @@ void NodeShape::updateRoundedRectangle()
         float x = radius + radius * cosf(angle);
         float y = radius + radius * sinf(angle);
         sf::Vertex vertex(sf::Vector2f(x, y), m_mainColor);
-        m_roundedRectangle.append(vertex);
+        m_rounded_rectangle.append(vertex);
     }
 
     // Top edge
-    m_roundedRectangle.append(sf::Vertex(sf::Vector2f(radius, 0), m_mainColor));
-    m_roundedRectangle.append(
+    m_rounded_rectangle.append(
+        sf::Vertex(sf::Vector2f(radius, 0), m_mainColor));
+    m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(width - radius, 0), m_mainColor));
 
     // Top right corner
@@ -262,13 +269,13 @@ void NodeShape::updateRoundedRectangle()
         float x = width - radius + radius * cosf(angle);
         float y = radius + radius * sinf(angle);
         sf::Vertex vertex(sf::Vector2f(x, y), m_mainColor);
-        m_roundedRectangle.append(vertex);
+        m_rounded_rectangle.append(vertex);
     }
 
     // Right edge
-    m_roundedRectangle.append(
+    m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(width, radius), m_mainColor));
-    m_roundedRectangle.append(
+    m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(width, height - radius),
                    interpolateColor(m_mainColor, m_secondaryColor, 0.7f)));
 
@@ -280,13 +287,13 @@ void NodeShape::updateRoundedRectangle()
         float x = width - radius + radius * cosf(angle);
         float y = height - radius + radius * sinf(angle);
         sf::Vertex vertex(sf::Vector2f(x, y), m_secondaryColor);
-        m_roundedRectangle.append(vertex);
+        m_rounded_rectangle.append(vertex);
     }
 
     // Bottom edge
-    m_roundedRectangle.append(
+    m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(width - radius, height), m_secondaryColor));
-    m_roundedRectangle.append(
+    m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(radius, height), m_secondaryColor));
 
     // Bottom left corner
@@ -297,20 +304,21 @@ void NodeShape::updateRoundedRectangle()
         float x = radius + radius * cosf(angle);
         float y = height - radius + radius * sinf(angle);
         sf::Vertex vertex(sf::Vector2f(x, y), m_secondaryColor);
-        m_roundedRectangle.append(vertex);
+        m_rounded_rectangle.append(vertex);
     }
 
     // Left edge
-    m_roundedRectangle.append(
+    m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(0, height - radius),
                    interpolateColor(m_mainColor, m_secondaryColor, 0.7f)));
-    m_roundedRectangle.append(sf::Vertex(sf::Vector2f(0, radius), m_mainColor));
+    m_rounded_rectangle.append(
+        sf::Vertex(sf::Vector2f(0, radius), m_mainColor));
 
     // Close the contour
     float angle = M_PIf + (M_PIf / 2.0f) * 0 / cornerSegments;
     float x = radius + radius * cosf(angle);
     float y = radius + radius * sinf(angle);
-    m_roundedRectangle.append(sf::Vertex(sf::Vector2f(x, y), m_mainColor));
+    m_rounded_rectangle.append(sf::Vertex(sf::Vector2f(x, y), m_mainColor));
 }
 
 // ----------------------------------------------------------------------------
@@ -419,15 +427,18 @@ void NodeShape::updateBorder()
 }
 
 // ----------------------------------------------------------------------------
-sf::Color NodeShape::interpolateColor(const sf::Color& color1,
-                                      const sf::Color& color2,
-                                      float factor) const
+sf::Color NodeShape::interpolateColor(const sf::Color& p_color1,
+                                      const sf::Color& p_color2,
+                                      float p_factor) const
 {
-    return sf::Color(
-        static_cast<sf::Uint8>(color1.r + (color2.r - color1.r) * factor),
-        static_cast<sf::Uint8>(color1.g + (color2.g - color1.g) * factor),
-        static_cast<sf::Uint8>(color1.b + (color2.b - color1.b) * factor),
-        static_cast<sf::Uint8>(color1.a + (color2.a - color1.a) * factor));
+    return {static_cast<sf::Uint8>(p_color1.r +
+                                   (p_color2.r - p_color1.r) * p_factor),
+            static_cast<sf::Uint8>(p_color1.g +
+                                   (p_color2.g - p_color1.g) * p_factor),
+            static_cast<sf::Uint8>(p_color1.b +
+                                   (p_color2.b - p_color1.b) * p_factor),
+            static_cast<sf::Uint8>(p_color1.a +
+                                   (p_color2.a - p_color1.a) * p_factor)};
 }
 
 } // namespace bt

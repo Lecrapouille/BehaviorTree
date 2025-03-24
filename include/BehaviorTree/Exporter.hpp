@@ -40,7 +40,7 @@ namespace bt {
 // ============================================================================
 //! \brief Class responsible for exporting behavior trees to various formats
 // ============================================================================
-class TreeExporter
+class Exporter
 {
 public:
 

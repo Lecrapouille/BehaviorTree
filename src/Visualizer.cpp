@@ -24,7 +24,7 @@
 // SOFTWARE.
 //*****************************************************************************
 
-#include "BehaviorTree/BehaviorTreeVisualizer.hpp"
+#include "BehaviorTree/Visualizer.hpp"
 #include "BehaviorTree/private/Serialization.hpp"
 
 #include <arpa/inet.h>
@@ -39,19 +39,16 @@
 namespace bt {
 
 // ----------------------------------------------------------------------------
-BehaviorTreeVisualizer::BehaviorTreeVisualizer(bt::Tree const& p_bt)
-    : m_behavior_tree(p_bt)
-{
-}
+Visualizer::Visualizer(bt::Tree const& p_bt) : m_behavior_tree(p_bt) {}
 
 // ----------------------------------------------------------------------------
-BehaviorTreeVisualizer::~BehaviorTreeVisualizer()
+Visualizer::~Visualizer()
 {
     disconnect();
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::disconnect()
+void Visualizer::disconnect()
 {
     // Signal the thread to stop
     m_running = false;
@@ -71,10 +68,9 @@ void BehaviorTreeVisualizer::disconnect()
 }
 
 // ----------------------------------------------------------------------------
-std::error_code
-BehaviorTreeVisualizer::connect(const std::string& p_ip,
-                                uint16_t p_port,
-                                std::chrono::milliseconds p_timeout)
+std::error_code Visualizer::connect(const std::string& p_ip,
+                                    uint16_t p_port,
+                                    std::chrono::milliseconds p_timeout)
 {
     std::cout << "Connecting to the visualizer (" << p_ip << ":" << p_port
               << " with timeout " << p_timeout.count() << " ms)..."
@@ -135,8 +131,7 @@ BehaviorTreeVisualizer::connect(const std::string& p_ip,
 
             // Start the worker thread
             m_running = m_connected = true;
-            m_worker_thread =
-                std::thread(&BehaviorTreeVisualizer::workerThread, this);
+            m_worker_thread = std::thread(&Visualizer::workerThread, this);
             return std::error_code(); // Success
         }
 
@@ -168,7 +163,7 @@ BehaviorTreeVisualizer::connect(const std::string& p_ip,
 }
 
 // ----------------------------------------------------------------------------
-bool BehaviorTreeVisualizer::tick()
+bool Visualizer::tick()
 {
     // Check if we are connected and if the tree structure has been sent
     if (!m_connected || !m_running || !m_tree_structure_sent)
@@ -191,7 +186,7 @@ bool BehaviorTreeVisualizer::tick()
 }
 
 // ----------------------------------------------------------------------------
-std::error_code BehaviorTreeVisualizer::sendTreeStructure()
+std::error_code Visualizer::sendTreeStructure()
 {
     if (m_socket < 0)
     {
@@ -206,7 +201,7 @@ std::error_code BehaviorTreeVisualizer::sendTreeStructure()
         serializer << static_cast<uint8_t>(MessageType::TREE_STRUCTURE);
 
         // Generate the YAML representation of the tree
-        serializer << TreeExporter::toYAML(m_behavior_tree);
+        serializer << Exporter::toYAML(m_behavior_tree);
 
         // Send the message
         ssize_t sent_bytes =
@@ -228,8 +223,7 @@ std::error_code BehaviorTreeVisualizer::sendTreeStructure()
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::assignNodeIds(bt::Node const* p_node,
-                                           uint32_t& p_next_id)
+void Visualizer::assignNodeIds(bt::Node const* p_node, uint32_t& p_next_id)
 {
     assert(p_node != nullptr);
 
@@ -258,8 +252,8 @@ void BehaviorTreeVisualizer::assignNodeIds(bt::Node const* p_node,
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::captureNodeStates(bt::Node const* p_node,
-                                               StatusUpdate& p_update)
+void Visualizer::captureNodeStates(bt::Node const* p_node,
+                                   StatusUpdate& p_update)
 {
     // Get the ID of the node
     auto it = m_ids.find(p_node);
@@ -288,7 +282,7 @@ void BehaviorTreeVisualizer::captureNodeStates(bt::Node const* p_node,
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeVisualizer::workerThread()
+void Visualizer::workerThread()
 {
     std::cout << "Starting the worker thread" << std::endl;
 
@@ -320,8 +314,7 @@ void BehaviorTreeVisualizer::workerThread()
 }
 
 // ----------------------------------------------------------------------------
-std::error_code
-BehaviorTreeVisualizer::sendStatusUpdate(const StatusUpdate& p_update)
+std::error_code Visualizer::sendStatusUpdate(const StatusUpdate& p_update)
 {
     // Check if the update is empty
     if (p_update.states.empty())

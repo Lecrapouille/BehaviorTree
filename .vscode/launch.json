@@ -5,7 +5,7 @@
             "name": "gdb",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/BehaviorTreeViewer",
+            "program": "${workspaceFolder}/build/BehaviorTreeVisualizer",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

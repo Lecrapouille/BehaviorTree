@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "BehaviorTree/BehaviorTreeVisualizer.hpp"
+#include "BehaviorTree/Visualizer.hpp"
 
 #include "Path.hpp"
 #include "Server.hpp"
@@ -52,21 +52,25 @@ namespace bt {
 //! \brief Application allowing to display in real time an application using a
 //! behavior tree.
 // ****************************************************************************
-class BehaviorTreeViewer
+class BehaviorTreeVisualizer
 {
 public:
 
-    BehaviorTreeViewer();
-    ~BehaviorTreeViewer();
+    BehaviorTreeVisualizer();
+    ~BehaviorTreeVisualizer();
 
     // ------------------------------------------------------------------------
     //! \brief Initialize the viewer window.
     //! \param[in] p_width Width of the window.
     //! \param[in] p_height Height of the window.
     //! \param[in] p_port Port of the debug server.
+    //! \param[in] p_antialiasing Antialiasing level.
     //! \return true if the initialization is successful.
     // ------------------------------------------------------------------------
-    bool initialize(uint32_t p_width, uint32_t p_height, uint16_t p_port);
+    bool initialize(uint32_t p_width,
+                    uint32_t p_height,
+                    uint16_t p_port,
+                    unsigned int p_antialiasing);
 
     // ------------------------------------------------------------------------
     //! \brief Run the main loop

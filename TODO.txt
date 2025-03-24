@@ -20,7 +20,7 @@ UntilSuccess → RepeatUntilSuccess (répète l'enfant jusqu'à succès)
 
 Pour les nœuds d'action (Action Nodes) :
 SyncActionNode → InstantAction (action instantanée)
-AsyncActionNode → LongAction (action longue) 
+AsyncActionNode → LongAction (action longue)
 CoroActionNode → BackgroundAction (car l'action se fait en arrière-plan)
 
 Pour les nœuds de condition (Condition Nodes) :
@@ -130,3 +130,8 @@ NodeStatus DecoratorNode::executeTick()
   }
   return status;
 }
+
+- Afficher plusieurs arbres.
+- Pouvoir creer des arbres comme groot2 => export YAML file.
+
+- Ajouter les children dans les constructeurs pour eviter de devoir creer des variables locales.

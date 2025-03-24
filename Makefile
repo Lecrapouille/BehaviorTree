@@ -65,10 +65,11 @@ viewer:
 ###################################################
 # Compile demos
 #
-DEMOS = $(sort $(dir $(wildcard ./demos/*/.)))
+DEMOS = $(sort $(dir $(wildcard ./docs/demos/*/.)))
 .PHONY: demos
 demos:
 	@$(call print-from,"Compiling demos",$(PROJECT_NAME),$(DEMOS))
+	@mkdir -p $(BUILD_DIR)/demos
 	@for i in $(DEMOS);            \
 	do                             \
 		$(MAKE) -C $$i all;        \

@@ -29,14 +29,14 @@
 ###################################################
 # Location of the project directory and Makefiles
 #
-P := $(abspath ../..)
+P := $(abspath ../../..)
 M := $(P)/.makefile
 
 ###################################################
 # Project definition
 #
 include $(P)/Makefile.common
-TARGET_NAME := $(DEMO_NAME)
+TARGET_NAME := demos/$(DEMO_NAME)
 TARGET_DESCRIPTION := $(DEMO_DESCRIPTION)
 include $(M)/project/Makefile
 

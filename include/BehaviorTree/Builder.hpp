@@ -37,7 +37,7 @@ namespace bt {
 // ****************************************************************************
 //! \brief Class responsible for building behavior trees from YAML/XML files.
 // ****************************************************************************
-class TreeBuilder
+class Builder
 {
 public:
 

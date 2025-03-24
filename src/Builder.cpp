@@ -24,14 +24,15 @@
 // SOFTWARE.
 //*****************************************************************************
 
-#include "BehaviorTree/TreeBuilder.hpp"
+#include "BehaviorTree/Builder.hpp"
+
 #include <yaml-cpp/yaml.h>
 
 namespace bt {
 
 // ----------------------------------------------------------------------------
-std::unique_ptr<Tree> TreeBuilder::fromFile(NodeFactory const& p_factory,
-                                            std::string const& p_file_path)
+std::unique_ptr<Tree> Builder::fromFile(NodeFactory const& p_factory,
+                                        std::string const& p_file_path)
 {
     try
     {
@@ -53,8 +54,8 @@ std::unique_ptr<Tree> TreeBuilder::fromFile(NodeFactory const& p_factory,
 }
 
 // ----------------------------------------------------------------------------
-std::unique_ptr<Tree> TreeBuilder::fromText(NodeFactory const& p_factory,
-                                            std::string const& p_yaml_text)
+std::unique_ptr<Tree> Builder::fromText(NodeFactory const& p_factory,
+                                        std::string const& p_yaml_text)
 {
     try
     {
@@ -77,8 +78,8 @@ std::unique_ptr<Tree> TreeBuilder::fromText(NodeFactory const& p_factory,
 }
 
 // ----------------------------------------------------------------------------
-Node::Ptr TreeBuilder::parseYAMLNode(NodeFactory const& p_factory,
-                                     YAML::Node const& p_node)
+Node::Ptr Builder::parseYAMLNode(NodeFactory const& p_factory,
+                                 YAML::Node const& p_node)
 {
     if (!p_node.IsMap())
     {

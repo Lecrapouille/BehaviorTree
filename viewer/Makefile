@@ -28,7 +28,7 @@ M := $(P)/.makefile
 # Project definition
 #
 include $(P)/Makefile.common
-TARGET_NAME := BehaviorTreeViewer
+TARGET_NAME := BehaviorTreeVisualizer
 TARGET_DESCRIPTION := Real-time Behavior Tree Viewer
 include $(M)/project/Makefile
 

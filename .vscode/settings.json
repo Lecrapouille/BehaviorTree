@@ -115,6 +115,14 @@
         "complex": "cpp",
         "*.hpp__": "cpp",
         "strstream": "cpp",
-        "coroutine": "cpp"
-    }
+        "coroutine": "cpp",
+        "charconv": "cpp",
+        "expected": "cpp",
+        "source_location": "cpp",
+        "cfenv": "cpp",
+        "typeindex": "cpp"
+    },
+    "cSpell.words": [
+        "Failer"
+    ]
 }

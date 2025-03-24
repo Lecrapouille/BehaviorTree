@@ -35,6 +35,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
@@ -105,10 +106,9 @@ public:
     //! value was found.
     // ------------------------------------------------------------------------
     template <typename T>
-    std::pair<T, bool> get(std::string const& key) const
+    [[nodiscard]] std::pair<T, bool> get(std::string const& key) const
     {
-        auto it = storage.find(key);
-        if (it != storage.end())
+        if (auto it = storage.find(key); it != storage.end())
         {
             try
             {
@@ -130,7 +130,7 @@ public:
     //! not found.
     // ------------------------------------------------------------------------
     template <typename T>
-    T getOr(std::string const& key, const T& defaultValue) const
+    [[nodiscard]] T getOr(std::string const& key, const T& defaultValue) const
     {
         auto [value, found] = get<T>(key);
         return found ? value : defaultValue;
@@ -142,7 +142,7 @@ public:
     //! \return true if the key exists, false otherwise
     // ------------------------------------------------------------------------
     template <class T>
-    bool has(std::string const& key) const
+    [[nodiscard]] bool has(std::string const& key) const
     {
         auto it = m_maps<T>.find(this);
         if (it == m_maps<T>.end())
@@ -169,11 +169,10 @@ public:
     //! \return Vector of keys stored for type T
     // ------------------------------------------------------------------------
     template <class T>
-    std::vector<std::string> getKeys() const
+    [[nodiscard]] std::vector<std::string> getKeys() const
     {
         std::vector<std::string> keys;
-        auto it = m_maps<T>.find(this);
-        if (it != m_maps<T>.end())
+        if (auto it = m_maps<T>.find(this); it != m_maps<T>.end())
         {
             keys.reserve(it->second.size());
             for (const auto& pair : it->second)
@@ -189,7 +188,7 @@ public:
     //! \return The entries for the type
     // ------------------------------------------------------------------------
     template <class T>
-    inline Entry<T>& entries() const
+    [[nodiscard]] inline Entry<T>& entries() const
     {
         return m_maps<T>.at(this);
     }
@@ -223,10 +222,9 @@ public:
     //! \return A unique pointer to the new node.
     // ------------------------------------------------------------------------
     template <typename T, typename... Args>
-    static std::unique_ptr<T> create(Args&&... args)
+    [[nodiscard]] static std::unique_ptr<T> create(Args&&... args)
     {
-        static_assert(std::is_base_of<Node, T>::value,
-                      "T must inherit from Node");
+        static_assert(std::is_base_of_v<Node, T>, "T must inherit from Node");
         return std::make_unique<T>(std::forward<Args>(args)...);
     }
 
@@ -242,7 +240,7 @@ public:
     //! Call the onTearDown() method if onRunning() did not return RUNNING.
     //! \return The status of the node (SUCCESS, FAILURE, RUNNING).
     // ------------------------------------------------------------------------
-    Status tick()
+    [[nodiscard]] Status tick()
     {
         if (m_status != Status::RUNNING)
         {
@@ -263,7 +261,7 @@ public:
     //! \brief Get the status of the node.
     //! \return The status of the node.
     // ------------------------------------------------------------------------
-    inline Status getStatus() const
+    [[nodiscard]] inline Status getStatus() const
     {
         return m_status;
     }
@@ -273,7 +271,7 @@ public:
     //! the node to be re-initialized through the onSetUp() method on the
     //! next tick().
     // ------------------------------------------------------------------------
-    inline void reset()
+    virtual void reset()
     {
         m_status = INVALID_STATUS;
     }
@@ -283,16 +281,7 @@ public:
     //! sure the whole tree is valid.
     //! \return True if the node is valid, false otherwise.
     // ------------------------------------------------------------------------
-    virtual bool isValid() const = 0;
-
-    // ------------------------------------------------------------------------
-    //! \brief Get the path of the node from the root node.
-    //! \return The path of the node.
-    // ------------------------------------------------------------------------
-    std::string getPath() const
-    {
-        return {}; // TODO
-    }
+    [[nodiscard]] virtual bool isValid() const = 0;
 
 private:
 
@@ -304,7 +293,7 @@ private:
     //! \return FAILURE if the node could not be initialized, else return
     //! SUCCESS or RUNNING if the node could be initialized.
     // ------------------------------------------------------------------------
-    virtual Status onSetUp()
+    [[nodiscard]] virtual Status onSetUp()
     {
         return Status::RUNNING;
     }
@@ -316,7 +305,7 @@ private:
     //! logic.
     //! \return The status of the node (SUCCESS, FAILURE, RUNNING).
     // ------------------------------------------------------------------------
-    virtual Status onRunning() = 0;
+    [[nodiscard]] virtual Status onRunning() = 0;
 
     // ------------------------------------------------------------------------
     //! \brief Method invoked by the method tick() when the action is no longer
@@ -360,7 +349,7 @@ public:
     //! tree are valid (i.e. if decorators and composites have children).
     //! \return True if the tree is valid, false otherwise.
     // ------------------------------------------------------------------------
-    virtual bool isValid() const override
+    [[nodiscard]] virtual bool isValid() const override
     {
         return (m_root != nullptr) && (m_root->isValid());
     }
@@ -368,10 +357,11 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Reset the tree.
     // ------------------------------------------------------------------------
-    void reset()
+    virtual void reset() override
     {
         m_root = nullptr;
         m_blackboard = nullptr;
+        m_status = INVALID_STATUS;
     }
 
     // ------------------------------------------------------------------------
@@ -389,7 +379,7 @@ public:
     //! \return A pointer to the new root node.
     // ------------------------------------------------------------------------
     template <class T, typename... Args>
-    inline Node& createRoot(Args&&... p_args)
+    [[nodiscard]] inline Node& createRoot(Args&&... p_args)
     {
         m_root = Node::create<T>(std::forward<Args>(p_args)...);
         return *reinterpret_cast<T*>(m_root.get());
@@ -408,10 +398,19 @@ public:
     //! \brief Get the root node of the behavior tree.
     //! \return Const reference to the root node pointer.
     // ------------------------------------------------------------------------
-    Node const& getRoot() const
+    [[nodiscard]] Node const& getRoot() const
     {
         return *m_root;
     }
+
+    // ------------------------------------------------------------------------
+    //! \brief Get the path of the node from the root node.
+    //! \return The path of the node.
+    // ------------------------------------------------------------------------
+    // [[nodiscard]] Node const& getPath(std::string const& p_path) const
+    // {
+    //     return {}; // TODO
+    // }
 
     // ------------------------------------------------------------------------
     //! \brief Set the blackboard of the tree
@@ -426,7 +425,7 @@ public:
     //! \brief Get the blackboard of the tree
     //! \return A pointer to the blackboard
     // ------------------------------------------------------------------------
-    inline Blackboard::Ptr blackboard()
+    [[nodiscard]] inline Blackboard::Ptr blackboard() const
     {
         return m_blackboard;
     }
@@ -438,7 +437,7 @@ private:
     //! \return The status of the tree: SUCCESS if the tree is valid,
     //! FAILURE otherwise.
     // ------------------------------------------------------------------------
-    virtual Status onSetUp() override
+    [[nodiscard]] virtual Status onSetUp() override
     {
         // We need a root node to be able to tick the tree
         if (m_root == nullptr)
@@ -459,7 +458,7 @@ private:
     //! \brief Tick the root node of the tree.
     //! \return The status of the root node.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         assert(m_root != nullptr && "Root node is not set");
         m_status = m_root->tick();
@@ -500,7 +499,7 @@ public:
     //! \return A reference to the new child node.
     // ------------------------------------------------------------------------
     template <class T, typename... Args>
-    inline T& addChild(Args&&... args)
+    [[nodiscard]] inline T& addChild(Args&&... args)
     {
         m_children.emplace_back(Node::create<T>(std::forward<Args>(args)...));
         m_iterator = m_children.begin();
@@ -511,7 +510,7 @@ public:
     //! \brief Check if the composite node has children.
     //! \return True if the composite node has children, false otherwise.
     // ------------------------------------------------------------------------
-    inline bool hasChildren() const
+    [[nodiscard]] inline bool hasChildren() const
     {
         return !m_children.empty();
     }
@@ -520,7 +519,7 @@ public:
     //! \brief Get the children nodes
     //! \return Const reference to the vector of child nodes
     // ------------------------------------------------------------------------
-    std::vector<Node::Ptr> const& getChildren() const
+    [[nodiscard]] std::vector<Node::Ptr> const& getChildren() const
     {
         return m_children;
     }
@@ -529,21 +528,16 @@ public:
     //! \brief Check if the composite node is valid.
     //! \return True if the composite node is valid, false otherwise.
     // ------------------------------------------------------------------------
-    virtual bool isValid() const override
+    [[nodiscard]] virtual bool isValid() const override
     {
         if (m_children.empty())
         {
             return false;
         }
 
-        for (auto& child : m_children)
-        {
-            if (!child->isValid())
-            {
-                return false;
-            }
-        }
-        return true;
+        return std::all_of(m_children.begin(),
+                           m_children.end(),
+                           [](const auto& child) { return child->isValid(); });
     }
 
 protected:
@@ -568,7 +562,7 @@ public:
     //! \brief Set up the sequence.
     //! \return The status of the sequence.
     // ------------------------------------------------------------------------
-    virtual Status onSetUp() override
+    [[nodiscard]] virtual Status onSetUp() override
     {
         m_iterator = m_children.begin();
         return Status::RUNNING;
@@ -578,12 +572,11 @@ public:
     //! \brief Run the sequence.
     //! \return The status of the sequence.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         while (m_iterator != m_children.end())
         {
-            auto status = (*m_iterator)->tick();
-            if (status != Status::SUCCESS)
+            if (auto status = (*m_iterator)->tick(); status != Status::SUCCESS)
             {
                 return status;
             }
@@ -609,13 +602,12 @@ public:
     //! \brief Run the reactive sequence.
     //! \return The status of the reactive sequence.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         m_iterator = m_children.begin();
         while (m_iterator != m_children.end())
         {
-            auto status = (*m_iterator)->tick();
-            if (status != Status::SUCCESS)
+            if (auto status = (*m_iterator)->tick(); status != Status::SUCCESS)
             {
                 return status;
             }
@@ -643,12 +635,11 @@ public:
     //! \brief Run the stateful sequence.
     //! \return The status of the stateful sequence.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         while (m_iterator != m_children.end())
         {
-            auto status = (*m_iterator)->tick();
-            if (status != Status::SUCCESS)
+            if (auto status = (*m_iterator)->tick(); status != Status::SUCCESS)
             {
                 return status;
             }
@@ -675,7 +666,7 @@ public:
     //! \brief Set up the selector.
     //! \return The status of the selector.
     // ------------------------------------------------------------------------
-    virtual Status onSetUp() override
+    [[nodiscard]] virtual Status onSetUp() override
     {
         m_iterator = m_children.begin();
         return Status::RUNNING;
@@ -685,12 +676,12 @@ public:
     //! \brief Run the selector.
     //! \return The status of the selector.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         while (m_iterator != m_children.end())
         {
-            Status status = (*m_iterator)->tick();
-            if (status != Status::FAILURE)
+            if (Status status = (*m_iterator)->tick();
+                status != Status::FAILURE)
             {
                 return status;
             }
@@ -716,13 +707,13 @@ public:
     //! \brief Run the reactive selector.
     //! \return The status of the reactive selector.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         m_iterator = m_children.begin();
         while (m_iterator != m_children.end())
         {
-            Status status = (*m_iterator)->tick();
-            if (status != Status::FAILURE)
+            if (Status status = (*m_iterator)->tick();
+                status != Status::FAILURE)
             {
                 return status;
             }
@@ -749,12 +740,12 @@ public:
     //! \brief Run the stateful selector.
     //! \return The status of the stateful selector.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         while (m_iterator != m_children.end())
         {
-            Status status = (*m_iterator)->tick();
-            if (status != Status::FAILURE)
+            if (Status status = (*m_iterator)->tick();
+                status != Status::FAILURE)
             {
                 return status;
             }
@@ -808,14 +799,14 @@ public:
     //! \brief Run the parallel composite.
     //! \return The status of the parallel composite.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         assert(hasChildren() && "Composite has no children");
 
         int total_success = 0;
         int total_fail = 0;
 
-        for (auto& child : m_children)
+        for (auto const& child : m_children)
         {
             auto status = child->tick();
             if (status == Status::SUCCESS)
@@ -865,29 +856,10 @@ public:
     }
 
     // ------------------------------------------------------------------------
-    //! \brief Get whether all children must succeed.
-    //! \return True if all children must succeed, false if only one must
-    //! succeed.
-    // ------------------------------------------------------------------------
-    bool getSuccessOnAll() const
-    {
-        return m_successOnAll;
-    }
-
-    // ------------------------------------------------------------------------
-    //! \brief Get whether all children must fail.
-    //! \return True if all children must fail, false if only one must fail.
-    // ------------------------------------------------------------------------
-    bool getFailOnAll() const
-    {
-        return m_failOnAll;
-    }
-
-    // ------------------------------------------------------------------------
     //! \brief Run the parallel all composite.
     //! \return The status of the parallel all composite.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         assert(hasChildren() && "Composite has no children");
 
@@ -897,7 +869,7 @@ public:
         size_t total_success = 0;
         size_t total_fail = 0;
 
-        for (auto& child : m_children)
+        for (auto const& child : m_children)
         {
             auto status = child->tick();
             if (status == Status::SUCCESS)
@@ -920,6 +892,24 @@ public:
         }
 
         return Status::RUNNING;
+    }
+
+    // ------------------------------------------------------------------------
+    //! \brief Get the success on all flag.
+    //! \return The success on all flag.
+    // ------------------------------------------------------------------------
+    [[nodiscard]] bool getSuccessOnAll() const
+    {
+        return m_successOnAll;
+    }
+
+    // ------------------------------------------------------------------------
+    //! \brief Get the fail on all flag.
+    //! \return The fail on all flag.
+    // ------------------------------------------------------------------------
+    [[nodiscard]] bool getFailOnAll() const
+    {
+        return m_failOnAll;
     }
 
 private:
@@ -951,7 +941,7 @@ public:
     //! \return A reference to the new child node
     // ------------------------------------------------------------------------
     template <class T, typename... Args>
-    inline T& setChild(Args&&... p_args)
+    [[nodiscard]] inline T& setChild(Args&&... p_args)
     {
         m_child = Node::create<T>(std::forward<Args>(p_args)...);
         return *reinterpret_cast<T*>(m_child.get());
@@ -961,7 +951,7 @@ public:
     //! \brief Check if the decorator has a child node.
     //! \return True if the decorator has a child node, false otherwise.
     // ------------------------------------------------------------------------
-    inline bool hasChild() const
+    [[nodiscard]] inline bool hasChild() const
     {
         return m_child != nullptr;
     }
@@ -971,7 +961,7 @@ public:
     //! \note The child node shall exist. Use hasChild() to check.
     //! \return The child node reference.
     // ------------------------------------------------------------------------
-    Node const& getChild() const
+    [[nodiscard]] inline Node const& getChild() const
     {
         return *(m_child.get());
     }
@@ -980,7 +970,7 @@ public:
     //! \brief Check if the composite node is valid.
     //! \return True if the composite node is valid, false otherwise.
     // ------------------------------------------------------------------------
-    virtual bool isValid() const override
+    [[nodiscard]] virtual bool isValid() const override
     {
         return (m_child != nullptr) && (m_child->isValid());
     }
@@ -991,10 +981,10 @@ protected:
 };
 
 // ****************************************************************************
-//! \brief The Succeeder decorator returns RUNNING if the child is RUNNING,
+//! \brief The ForceSuccess decorator returns RUNNING if the child is RUNNING,
 //! else returns SUCCESS, regardless of what happens to the child.
 // ****************************************************************************
-class Succeeder: public Decorator
+class ForceSuccess: public Decorator
 {
 public:
 
@@ -1002,7 +992,7 @@ public:
     //! \brief Run the succeeder.
     //! \return The status of the succeeder.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         Status status = m_child->tick();
         return (status == Status::RUNNING) ? Status::RUNNING : Status::SUCCESS;
@@ -1010,10 +1000,10 @@ public:
 };
 
 // ****************************************************************************
-//! \brief The Failer decorator returns RUNNING if the child is RUNNING,
+//! \brief The ForceFailure decorator returns RUNNING if the child is RUNNING,
 //! else returns FAILURE, regardless of what happens to the child.
 // ****************************************************************************
-class Failer: public Decorator
+class ForceFailure: public Decorator
 {
 public:
 
@@ -1021,7 +1011,7 @@ public:
     //! \brief Run the failer.
     //! \return The status of the failer.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         Status status = m_child->tick();
         return (status == Status::RUNNING) ? Status::RUNNING : Status::FAILURE;
@@ -1041,7 +1031,7 @@ public:
     //! \brief Run the inverter.
     //! \return The status of the inverter.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         auto s = m_child->tick();
         if (s == Status::SUCCESS)
@@ -1060,7 +1050,7 @@ public:
 // ****************************************************************************
 //! \brief The Repeater decorator repeats infinitely or to a limit until the
 //! child returns success.
-//! \fixme the loop should be done entierly internally during the tick() method
+//! \fixme the loop should be done entirely internally during the tick() method
 //! ?
 // ****************************************************************************
 class Repeat: public Decorator
@@ -1071,7 +1061,7 @@ public:
     //! \brief Constructor taking a limit of repetitions.
     //! \param[in] p_repetitions The limit of repetitions.
     // ------------------------------------------------------------------------
-    Repeat(size_t p_repetitions = 0) : m_repetitions(p_repetitions) {}
+    explicit Repeat(size_t p_repetitions = 0) : m_repetitions(p_repetitions) {}
 
     // ------------------------------------------------------------------------
     //! \brief Set up the repeater.
@@ -1088,11 +1078,9 @@ public:
     //! \fixme Should be a loop inside the tick() method like done in libBT.cpp?
     //! \return The status of the repeater.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
-        Status status = m_child->tick();
-
-        if (status == Status::RUNNING)
+        if (Status status = m_child->tick(); status == Status::RUNNING)
         {
             return Status::RUNNING;
         }
@@ -1101,10 +1089,14 @@ public:
             return Status::FAILURE;
         }
 
-        if ((m_repetitions > 0) && (++m_count == m_repetitions))
+        if (m_repetitions > 0)
         {
-            m_count = m_repetitions;
-            return Status::SUCCESS;
+            ++m_count;
+            if (m_count == m_repetitions)
+            {
+                m_count = m_repetitions;
+                return Status::SUCCESS;
+            }
         }
 
         return Status::RUNNING;
@@ -1113,7 +1105,7 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Get the current count of repetitions.
     // ------------------------------------------------------------------------
-    size_t getCount() const
+    [[nodiscard]] size_t getCount() const
     {
         return m_count;
     }
@@ -1121,7 +1113,7 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Get the limit number of repetitions.
     // ------------------------------------------------------------------------
-    size_t getRepetitions() const
+    [[nodiscard]] size_t getRepetitions() const
     {
         return m_repetitions;
     }
@@ -1144,7 +1136,7 @@ public:
     //! \brief Constructor taking a number of attempts.
     //! \param[in] p_attempts The maximum number of attempts.
     // ------------------------------------------------------------------------
-    Retry(size_t p_attempts) : m_attempts(p_attempts) {}
+    explicit Retry(size_t p_attempts) : m_attempts(p_attempts) {}
 
     // ------------------------------------------------------------------------
     //! \brief Set up the retry.
@@ -1160,11 +1152,9 @@ public:
     //! \brief Run the retry.
     //! \return The status of the retry.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
-        Status status = m_child->tick();
-
-        if (status == Status::SUCCESS)
+        if (Status status = m_child->tick(); status == Status::SUCCESS)
         {
             return Status::SUCCESS;
         }
@@ -1173,9 +1163,13 @@ public:
             return Status::RUNNING;
         }
 
-        if ((m_attempts > 0) && (++m_count >= m_attempts))
+        if (m_attempts > 0)
         {
-            return Status::FAILURE;
+            ++m_count;
+            if (m_count >= m_attempts)
+            {
+                return Status::FAILURE;
+            }
         }
 
         return Status::RUNNING;
@@ -1185,7 +1179,7 @@ public:
     //! \brief Get the current count of attempts.
     //! \return The current count of attempts.
     // ------------------------------------------------------------------------
-    size_t getCount() const
+    [[nodiscard]] size_t getCount() const
     {
         return m_count;
     }
@@ -1194,7 +1188,7 @@ public:
     //! \brief Get the limit number of attempts.
     //! \return The limit number of attempts.
     // ------------------------------------------------------------------------
-    size_t getAttempts() const
+    [[nodiscard]] size_t getAttempts() const
     {
         return m_attempts;
     }
@@ -1217,7 +1211,7 @@ public:
     //! \brief Run the until success decorator.
     //! \return The status of the until success decorator.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         while (true)
         {
@@ -1242,7 +1236,7 @@ public:
     //! \brief Execute the decorator.
     //! \return The status of the decorator.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         while (true)
         {
@@ -1271,13 +1265,13 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Constructor with blackboard.
     // ------------------------------------------------------------------------
-    Leaf(Blackboard::Ptr p_blackboard) : m_blackboard(p_blackboard) {}
+    explicit Leaf(Blackboard::Ptr p_blackboard) : m_blackboard(p_blackboard) {}
 
     // ------------------------------------------------------------------------
     //! \brief Get the blackboard for the node
     //! \return The blackboard for the node
     // ------------------------------------------------------------------------
-    inline Blackboard::Ptr getBlackboard() const
+    [[nodiscard]] inline Blackboard::Ptr getBlackboard() const
     {
         return m_blackboard;
     }
@@ -1286,7 +1280,7 @@ public:
     //! \brief Check if the leaf node is valid.
     //! \return True if the leaf node is valid, false otherwise.
     // ------------------------------------------------------------------------
-    virtual bool isValid() const override
+    [[nodiscard]] virtual bool isValid() const override
     {
         return true;
     }
@@ -1300,7 +1294,7 @@ protected:
 // ****************************************************************************
 //! \brief Simple leaf that always returns SUCCESS.
 // ****************************************************************************
-class AlwaysSuccess: public Leaf
+class Success: public Leaf
 {
 public:
 
@@ -1308,7 +1302,7 @@ public:
     //! \brief Run the always success leaf.
     //! \return The status of the always success leaf.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         return Status::SUCCESS;
     }
@@ -1317,7 +1311,7 @@ public:
 // ****************************************************************************
 //! \brief Simple leaf that always returns FAILURE.
 // ****************************************************************************
-class AlwaysFailure: public Leaf
+class Failure: public Leaf
 {
 public:
 
@@ -1325,7 +1319,7 @@ public:
     //! \brief Run the always failure leaf.
     //! \return The status of the always failure leaf.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         return Status::FAILURE;
     }
@@ -1371,7 +1365,7 @@ public:
     //! \brief Execute the action.
     //! \return The status of the action.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         return m_func();
     }
@@ -1380,7 +1374,7 @@ public:
     //! \brief Check if the leaf node is valid (not nullptr function).
     //! \return True if the leaf node is valid, false otherwise.
     // ------------------------------------------------------------------------
-    virtual bool isValid() const override
+    [[nodiscard]] virtual bool isValid() const override
     {
         return m_func != nullptr;
     }
@@ -1425,7 +1419,7 @@ public:
     //! \brief Execute the condition.
     //! \return SUCCESS if the condition is true, FAILURE otherwise.
     // ------------------------------------------------------------------------
-    virtual Status onRunning() override
+    [[nodiscard]] virtual Status onRunning() override
     {
         return m_func() ? Status::SUCCESS : Status::FAILURE;
     }
@@ -1434,7 +1428,7 @@ public:
     //! \brief Check if the leaf node is valid (not nullptr function).
     //! \return True if the leaf node is valid, false otherwise.
     // ------------------------------------------------------------------------
-    virtual bool isValid() const override
+    [[nodiscard]] virtual bool isValid() const override
     {
         return m_func != nullptr;
     }
@@ -1453,104 +1447,128 @@ class NodeFactory
 {
 public:
 
-    //! \brief Function type for creating nodes
+    // ------------------------------------------------------------------------
+    //! \brief Function type for creating nodes.
+    // ------------------------------------------------------------------------
     using NodeCreator = std::function<std::unique_ptr<Node>()>;
 
+    // ------------------------------------------------------------------------
+    //! \brief Default destructor.
+    // ------------------------------------------------------------------------
     virtual ~NodeFactory() = default;
 
-    //! \brief Register a node type with a creation function
-    //! \param[in] name Name used to identify this node type
-    //! \param[in] creator Function that creates instances of this node type
-    void registerNode(const std::string& name, NodeCreator creator)
+    // ------------------------------------------------------------------------
+    //! \brief Register a node type with a creation function.
+    //! \param[in] p_name Name used to identify this node type.
+    //! \param[in] p_creator Function that creates instances of this node type.
+    // ------------------------------------------------------------------------
+    void registerNode(const std::string& p_name, NodeCreator p_creator)
     {
-        m_creators[name] = std::move(creator);
+        m_creators[p_name] = std::move(p_creator);
     }
 
-    //! \brief Create a node instance by name
-    //! \param[in] name The registered name of the node type to create
+    // ------------------------------------------------------------------------
+    //! \brief Create a node instance by name.
+    //! \param[in] p_name The registered name of the node type to create.
     //! \return Unique pointer to the new node instance, or nullptr if name not
-    //! found
-    std::unique_ptr<Node> createNode(const std::string& name) const
+    //! found.
+    // ------------------------------------------------------------------------
+    std::unique_ptr<Node> createNode(const std::string& p_name) const
     {
-        auto it = m_creators.find(name);
-        if (it != m_creators.end())
+        if (auto it = m_creators.find(p_name); it != m_creators.end())
         {
             return it->second();
         }
         return nullptr;
     }
 
-    //! \brief Check if a node type is registered
-    //! \param[in] name The name to check
-    //! \return True if the node type is registered
-    bool hasNode(const std::string& name) const
+    // ------------------------------------------------------------------------
+    //! \brief Check if a node type is registered.
+    //! \param[in] p_name The name to check.
+    //! \return True if the node type is registered.
+    // ------------------------------------------------------------------------
+    [[nodiscard]] bool hasNode(const std::string& p_name) const
     {
-        return m_creators.find(name) != m_creators.end();
+        return m_creators.find(p_name) != m_creators.end();
     }
 
-    //! \brief Helper method to register an action with a lambda
-    //! \param[in] name Name used to identify this action
-    //! \param[in] func Lambda function implementing the action
-    void registerAction(const std::string& name, SugarAction::Function func)
+    // ------------------------------------------------------------------------
+    //! \brief Helper method to register an action with a lambda.
+    //! \param[in] p_name Name used to identify this action.
+    //! \param[in] p_func Lambda function implementing the action.
+    // ------------------------------------------------------------------------
+    void registerAction(const std::string& p_name, SugarAction::Function p_func)
     {
-        registerNode(name, [func = std::move(func)]() {
+        registerNode(p_name, [func = std::move(p_func)]() {
             return Node::create<SugarAction>(func);
         });
     }
 
-    //! \brief Helper method to register an action with a lambda and blackboard
-    //! \param[in] name Name used to identify this action
-    //! \param[in] func Lambda function implementing the action
-    //! \param[in] blackboard The blackboard to use
-    void registerAction(const std::string& name,
-                        SugarAction::Function func,
-                        Blackboard::Ptr blackboard)
+    // ------------------------------------------------------------------------
+    //! \brief Helper method to register an action with a lambda and blackboard.
+    //! \param[in] name Name used to identify this action.
+    //! \param[in] p_func Lambda function implementing the action.
+    //! \param[in] p_blackboard The blackboard to use.
+    // ------------------------------------------------------------------------
+    void registerAction(const std::string& p_name,
+                        SugarAction::Function p_func,
+                        Blackboard::Ptr p_blackboard)
     {
-        registerNode(name, [func = std::move(func), blackboard]() {
-            return Node::create<SugarAction>(func, blackboard);
+        registerNode(p_name, [func = std::move(p_func), p_blackboard]() {
+            return Node::create<SugarAction>(func, p_blackboard);
         });
     }
 
-    //! \brief Helper template method to register a node with blackboard
-    //! \tparam T The node type to register
-    //! \param[in] name Name used to identify this node type
-    //! \param[in] blackboard The blackboard to use
+    // ------------------------------------------------------------------------
+    //! \brief Helper template method to register a node with blackboard.
+    //! \tparam T The node type to register.
+    //! \param[in] p_name Name used to identify this node type.
+    //! \param[in] p_blackboard The blackboard to use.
+    // ------------------------------------------------------------------------
     template <typename T>
-    void registerNode(const std::string& name, Blackboard::Ptr blackboard)
+    void registerNode(const std::string& p_name, Blackboard::Ptr p_blackboard)
     {
-        registerNode(name,
-                     [blackboard]() { return Node::create<T>(blackboard); });
+        registerNode(
+            p_name, [p_blackboard]() { return Node::create<T>(p_blackboard); });
     }
 
-    //! \brief Helper template method to register a node without blackboard
-    //! \tparam T The node type to register
-    //! \param[in] name Name used to identify this node type
+    // ------------------------------------------------------------------------
+    //! \brief Helper template method to register a node without blackboard.
+    //! \tparam T The node type to register.
+    //! \param[in] p_name Name used to identify this node type.
+    // ------------------------------------------------------------------------
     template <typename T>
-    void registerNode(const std::string& name)
+    void registerNode(const std::string& p_name)
     {
-        registerNode(name, []() { return Node::create<T>(); });
+        registerNode(p_name, []() { return Node::create<T>(); });
     }
 
-    //! \brief Helper method to register a condition with a lambda
-    //! \param[in] name Name used to identify this condition
-    //! \param[in] func Lambda function implementing the condition
-    void registerCondition(const std::string& name, Condition::Function func)
+    // ------------------------------------------------------------------------
+    //! \brief Helper method to register a condition with a lambda.
+    //! \param[in] p_name Name used to identify this condition.
+    //! \param[in] p_func Lambda function implementing the condition.
+    // ------------------------------------------------------------------------
+    void registerCondition(const std::string& p_name,
+                           Condition::Function p_func)
     {
-        registerNode(name, [func = std::move(func)]() {
+        registerNode(p_name, [func = std::move(p_func)]() {
             return Node::create<Condition>(func);
         });
     }
 
+    // ------------------------------------------------------------------------
     //! \brief Helper method to register a condition with a lambda and
-    //! blackboard \param[in] name Name used to identify this condition
-    //! \param[in] func Lambda function implementing the condition
-    //! \param[in] blackboard The blackboard to use
-    void registerCondition(const std::string& name,
-                           Condition::Function func,
-                           Blackboard::Ptr blackboard)
+    //! blackboard.
+    //! \param[in] p_name Name used to identify this condition.
+    //! \param[in] p_func Lambda function implementing the condition.
+    //! \param[in] p_blackboard The blackboard to use.
+    // ------------------------------------------------------------------------
+    void registerCondition(const std::string& p_name,
+                           Condition::Function p_func,
+                           Blackboard::Ptr p_blackboard)
     {
-        registerNode(name, [func = std::move(func), blackboard]() {
-            return Node::create<Condition>(func, blackboard);
+        registerNode(p_name, [func = std::move(p_func), p_blackboard]() {
+            return Node::create<Condition>(func, p_blackboard);
         });
     }
 

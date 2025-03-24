@@ -24,7 +24,7 @@
 // SOFTWARE.
 //*****************************************************************************
 
-#include "BehaviorTree/BehaviorTreeVisualizer.hpp"
+#include "BehaviorTree/Visualizer.hpp"
 #include "BehaviorTree/private/Serialization.hpp"
 
 #include "NodeShape.hpp"
@@ -61,11 +61,10 @@ bool TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
         // Read the message type
         uint8_t type_value;
         deserializer >> type_value;
-        auto type =
-            static_cast<BehaviorTreeVisualizer::MessageType>(type_value);
+        auto type = static_cast<Visualizer::MessageType>(type_value);
 
         // Process according to the message type
-        if (type == BehaviorTreeVisualizer::MessageType::TREE_STRUCTURE)
+        if (type == Visualizer::MessageType::TREE_STRUCTURE)
         {
             // Clear the existing nodes
             m_nodes.clear();
@@ -91,7 +90,7 @@ bool TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
                 return false;
             }
         }
-        else if (type == BehaviorTreeVisualizer::MessageType::STATE_UPDATE)
+        else if (type == Visualizer::MessageType::STATE_UPDATE)
         {
             // Read the number of states
             uint32_t count;
@@ -179,7 +178,8 @@ void TreeRenderer::createNodes(const YAML::Node& yaml_node, uint32_t& next_id)
         node.shape->setPadding(20.0f, 15.0f);
         node.shape->setCornerRadius(10.0f);
         node.shape->setTextSmoothing(false);
-        // setNodeIcon(node.shape.get(), node.name.c_str());
+        setNodeIcon(node.shape.get(), "sequence", 0.25f);
+        // node.name.c_str());
 
         // Process the children if they are available (for composite nodes)
         if (properties.IsMap() && properties["children"])
@@ -390,24 +390,25 @@ void TreeRenderer::debugPrintNodes() const
 }
 
 // ----------------------------------------------------------------------------
-void TreeRenderer::setNodeIcon(NodeShape* p_nodeShape, const char* p_name) const
+void TreeRenderer::setNodeIcon(NodeShape* p_node_shape,
+                               const char* p_name,
+                               float p_scale) const
 {
     if (m_icons.empty())
         return;
 
     // Try to find an icon matching the node name
-    std::string nodeName(p_name);
-    auto iconIt = m_icons.find(nodeName);
-
-    if (iconIt != m_icons.end())
+    std::string node_name(p_name);
+    auto icon_it = m_icons.find(node_name);
+    if (icon_it != m_icons.end())
     {
-        // Use the matching icon
-        p_nodeShape->setIcon(iconIt->second);
+        // Use the matching icon with a smaller scale
+        p_node_shape->setIcon(icon_it->second, p_scale);
     }
     else if (!m_icons.empty())
     {
-        // Use the first available icon as default
-        p_nodeShape->setIcon(m_icons.begin()->second);
+        // Use the first available icon as default with a smaller scale
+        p_node_shape->setIcon(m_icons.begin()->second, p_scale);
     }
 }
 
@@ -439,13 +440,13 @@ void TreeRenderer::drawNode(NodeInfo& p_node,
     NodeShape& shape = *(p_node.shape.get());
 
     // Define the color status with gradient
-    sf::Color mainColor = getStatusColor(p_node.status);
-    sf::Color secondaryColor =
-        sf::Color(sf::Uint8(std::max(0, mainColor.r - 50)),
-                  sf::Uint8(std::max(0, mainColor.g - 50)),
-                  sf::Uint8(std::max(0, mainColor.b - 50)),
-                  mainColor.a);
-    shape.setColors(mainColor, secondaryColor, sf::Color(0, 255, 255, 200));
+    sf::Color main_color = getStatusColor(p_node.status);
+    sf::Color secondary_color =
+        sf::Color(sf::Uint8(std::max(0, main_color.r - 50)),
+                  sf::Uint8(std::max(0, main_color.g - 50)),
+                  sf::Uint8(std::max(0, main_color.b - 50)),
+                  main_color.a);
+    shape.setColors(main_color, secondary_color, sf::Color(0, 255, 255, 200));
 
     // Set the position of the shape, taking into account the dimensions for
     // centering
@@ -473,25 +474,25 @@ void TreeRenderer::drawConnection(sf::Vector2f p_start,
         return nullptr;
     };
 
-    const NodeInfo* startNode = findNodeByPosition(p_start);
-    const NodeInfo* endNode = findNodeByPosition(p_end);
+    const NodeInfo* start_node = findNodeByPosition(p_start);
+    const NodeInfo* end_node = findNodeByPosition(p_end);
 
-    if (!startNode || !endNode)
+    if (!start_node || !end_node)
     {
         return;
     }
 
     // Get the dimensions of both nodes
-    sf::Vector2f startDim = startNode->shape->getDimensions();
-    sf::Vector2f endDim = endNode->shape->getDimensions();
+    sf::Vector2f start_dim = start_node->shape->getDimensions();
+    sf::Vector2f end_dim = end_node->shape->getDimensions();
 
     // Calculate the connection points at the center bottom of parent and center
     // top of child
     sf::Vector2f start = p_start;
-    start.y += startDim.y / 2.0f; // Bottom center of parent node
+    start.y += start_dim.y / 2.0f; // Bottom center of parent node
 
     sf::Vector2f end = p_end;
-    end.y -= endDim.y / 2.0f; // Top center of child node
+    end.y -= end_dim.y / 2.0f; // Top center of child node
 
     // Calculate horizontal distance between nodes
     float horizontal_distance = std::abs(end.x - start.x);

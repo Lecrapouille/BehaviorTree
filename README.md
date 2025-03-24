@@ -1,71 +1,96 @@
-# Behavior Tree (BT)
+# 🌳 Behavior Tree (BT)
 
-A lightweight **behavior trees** C++14 library with a real-time visualizer of the state of the tree.
+A lightweight **behavior trees** C++14 library with its real-time visualizer of the state of the tree.
 
-### License
+This library is based on [BrainTree](https://github.com/arvidsson/BrainTree), which is no longer maintained.
+It offers a simpler codebase than [BehaviorTree.CPP](https://github.com/BehaviorTree/BehaviorTree.CPP).
+Unlike BehaviorTree.CPP, our tree visualizer remains free and open source (and not compatible to Groot).
 
-MIT License
+BrainTree comes with the following nodes:
 
-### What is a Behavior Tree?
+- Composites: Sequence, Selector, Parallel.
+- Decorators: Inverter, Succeeder, Repeater.
+- Leaves: Action with Blackboard for data sharing.
 
-A Behavior Tree is a mathematical model of plan execution used in computer science, robotics, control systems and video games. It describes switching between a finite set of tasks in a modular fashion. Its strength lies in its ability to create very complex tasks composed of simple tasks, without worrying how the simple tasks are implemented.
+This library BrainTree extends by implementing the following features:
 
-### Key Features of this library
-
-This project is based on the unmaintained library https://github.com/arvidsson/BrainTree. This library aims to provide a simpler and more intuitive code base compared to the mainstream https://github.com/BehaviorTree/BehaviorTree.CPP library and offers a free real-time visualizer of the tree state.
-
-- Regular nodes:
-  - Composites: Sequence, Selector, Parallel
-  - Decorators: Inverter, Succeeder, Repeater
-  - Leaves: Condition, Action with Blackboard for data sharing
+- New nodes:
+  - Composites: Reactive and with-memory sequence and selector.
+  - Decorators: .
+  - Leaves: Condition.
 - YAML format as tree description for building trees.
 - Export trees to other formats (mermaid, groot2).
 - Real-time graphical debugger.
 
+**⚠️ Warning: This library is still on its early stage. Use it with caution !**
+
 ---
 
-## Installation Guide
+## 🏗️ Building this project
 
-### Dependencies
+### 📦 Dependencies
 
-- yaml-cpp
+- yaml-cpp: for building trees.
+- [SFML](https://www.sfml-dev.org/fr/): for visualizing trees.
 
 ```bash
-sudo apt-get install libyaml-cpp-dev
+sudo apt-get install libyaml-cpp-dev libsfml-dev
 ```
 
-### Build and Install
+### 🛠️ Compilation and Installation
 
 ```bash
 git clone https://github.com/Lecrapouille/BehaviorTree --recurse
 cd BehaviorTree
 make -j8
+```
+
+You can optionally install on your operating system:
+
+```bash
 sudo make install
 ```
 
-### Run a demo with the graphical debugger
-
-The `make` command, if successful, should have created a build folder.
+You can optionally run unit-tests:
 
 ```bash
-./build/BehaviorTreeViewer &
-./build/SecurityRobot
-```
-
-### Build and Run Unit Tests
-
-```bash
-make test
+make test -j8
 ./tests/TestBehaviorTree
 ```
 
 A coverage report should appear.
 
+### 👀 Run the Behavior Tree Visualizer Application
+
+This library also comes with a standalone application that listens on port 9090 (by default) and
+visualizes the running Behavior Tree connected to it.
+
+Launch this application before running the target application to enable visualization:
+
+```bash
+./build/BehaviorTreeVisualizer
+```
+
+Here is an example of what you can see once a tree is discovered:
+
+![BehaviorTreeVisualizer](docs/pics/BehaviorTreeVisualizer.png)
+
+### 🎮 Run a Demo
+
+The `make` command, if successful, should have created a `build` folder at the root of the project.
+This demo is ready to connect to the visualizer.
+
+```bash
+./build/demos/SecurityRobot
+```
+
 ---
 
-## Quick Behavior Tree Start Guide
+## 🌲 What are Behavior Trees?
 
-### Behavior Tree hierarchy
+A Behavior Tree is a mathematical model of plan execution used in computer science, robotics, control systems and video games. Behavior Trees are used as an alternative to state machines. A Behavior Tree describes switching between a finite set of tasks in a modular fashion. Its strength lies in its ability to create very complex tasks composed of simple tasks, without worrying how the simple tasks are implemented.
+
+### 📊 Hierarchy of Node Types
 
 - **Tree**: A hierarchical parent-children structure of nodes. The root is the initial node.
 - **Nodes**: The basic building blocks of a behavior tree. Nodes are of three types:
@@ -73,8 +98,7 @@ A coverage report should appear.
 - **Composite**: A node that has several children (at least one child).
 - **Decorator**: A node that has exactly one child and modifies its status (decoration).
 - **Leaf**: Nodes that don't have any children; these are the actual actions that interact with the system (i.e., robot commands).
-
-Here is the UML hierarchy:
+- **Blackboard**: Since node instances do not know each other and may want to exchange data, they use a shared key/value structure (dictionary) for exchanging data.
 
 ```mermaid
 ---
@@ -84,6 +108,7 @@ config:
     hideEmptyMembersBox: true
 ---
 classDiagram
+    class Blackboard
     class Tree
     class Node
     class Composite
@@ -100,100 +125,285 @@ classDiagram
     Decorator --> Node : child
 
     Node <|-- Leaf
+
+    Tree --> Blackboard
 ```
 
-### Sharing data between nodes
+### ⚡ Execution Cycle
 
-- **Blackboard**: Since node instances do not know each other and may want to exchange data, they use a shared key/value structure for exchanging data.
+The execution engine for a tree is single-threaded. Nodes are executed in discrete time concurrently by their **tick** callback. First, let remember the two important definitions:
 
-### Status and Execution Cycle
+- **Concurrency**: When two or more tasks can start, run, and complete in overlapping time periods. It doesn't necessarily mean they will ever both be running at the same instant.
+- **Parallelism** is when tasks run at the same time in different threads, e.g., on a multi-core processor.
 
-The Tree execution engine is single-threaded. Nodes are executed in discrete time concurrently by their tick callback.
+**Tick**: is the fundamental execution mechanism in behavior trees:
 
-- **Concurrency**: When two or more tasks can start, run, and complete in overlapping time periods. It doesn't necessarily mean they will ever both be running at the same instant. **Parallelism** is when tasks run at the same time in different threads, e.g., on a multicore processor.
-
-- **Tick**: The fundamental execution mechanism in behavior trees:
-  - A tick is a propagation of execution signals from parent to children.
-  - Each tick represents one update cycle of the behavior tree.
-  - Ticks flow down the tree from the root to the leaves following specific rules for each node type.
-  - When a node is ticked, it executes its logic and returns a status (SUCCESS, FAILURE, or RUNNING).
-  - Ticks occur at a frequency determined by the application (e.g., 10Hz for a robot, 60Hz for a game).
-  - The `tick()` function implements a template method pattern with hooks for `onSetUp()`, `onRunning()` and `onTearDown()`.
-  - The tick methods are sequential and blocking. They are not executed inside a thread.
-  - A node should return as soon as possible to avoid blocking the entire flow of execution. Therefore, avoid using loops or delays inside these methods.
-
-- **Node Status**: Each node returns one of three possible statuses:
+- Each tick represents one update cycle of the behavior tree. Ticks occur at a frequency determined by the application (e.g., 10Hz for a robot, 60Hz for a game).
+- A tick is a propagation of execution signals from parent to children. It flows down the tree from the root to the leaves following specific rules for each node type.
+- When a node is ticked, it executes its logic and returns a **status** (SUCCESS, FAILURE, RUNNING). Since the logic is not executed inside a thread, the execution should return as soon as possible to avoid blocking the entire flow of execution of the tree. To avoid blocking, the logic shall be split:
   - **SUCCESS** (green): The task was completed successfully.
   - **FAILURE** (red): The task could not be completed or a condition was not met.
   - **RUNNING** (orange): The task is still in progress and needs more time to complete.
 
-- **Execution Flow**:
-  1. When a parent node is ticked, it decides which children to tick based on its type.
-  2. A node calls `onSetUp()` on the first execution. This allows for initialization that can either succeed (SUCCESS) or fail (FAILURE).
-  3. A node calls `onRunning()` on subsequent ticks, returning SUCCESS, FAILURE, or RUNNING.
-  4. When a node transitions from RUNNING to SUCCESS/FAILURE, `onTearDown()` is called. This allows for cleanup operations.
-  5. Different node types (Composite, Decorator, Leaf) implement different strategies for propagating ticks.
+**Execution Flow**: The `tick()` function implements a template method pattern with hooks for `onSetUp()`, `onRunning()` and `onTearDown()`.
 
-### Simple Example
+- When a parent node is ticked, it decides which children to tick based on its type.
+- A node calls `onSetUp()` on the first execution. This allows for initialization that can either succeed (SUCCESS) or fail (FAILURE).
+- A node calls `onRunning()` on subsequent ticks, returning SUCCESS, FAILURE, or RUNNING.
+- When a node transitions from RUNNING to SUCCESS/FAILURE, `onTearDown()` is called. This allows for cleanup operations.
+- Different node types (Composite, Decorator, Leaf) implement different strategies for propagating ticks, as explained in details in next sections of this document.
 
-Let's consider a robot with the following minimal tree that allows it to cross a room. The tree is composed of the following nodes:
+### 📝 Simple Example
+
+Let's consider a robot with the following minimal tree that allows it to cross a room.
+
+![Sequence of the behavior tree](https://www.behaviortree.dev/assets/images/sequence_animation-4155a892772542caf81fa16c824c91f8.svg)
+
+The tree is composed of the following nodes:
 
 - Root node depicted by the black dot.
-- A single composite node named "Sequence".
-- Three leaves depicting three actions the robot can perform:
+- A single composite node named `Sequence` which is a composite node executing children in order until one fails. This node is given in all behavior tree libraries.
+- For our example, three project-specific leaves depicting three actions the robot can perform:
   - opening a door,
   - walking through the doorway,
   - and closing the door.
 
-![Sequence of the behavior tree](https://www.behaviortree.dev/assets/images/sequence_animation-4155a892772542caf81fa16c824c91f8.svg)
+Thanks to the `Sequence` node, the three actions `open the door`, `walk` and `close the door` are executed in this order and, in our case, immediately return the status `SUCCESS`. While three actions have not all ended with `SUCCESS` the status of the `Sequence` node stays to `RUNNING`. If one of the actions fails (return `FAILURE`), the status of the sequence node becomes `FAILURE` and stop executing children nodes. If all actions end with `SUCCESS`, the status of sequence node becomes `SUCCESS`.
 
-The `Sequence` node is a classic composite node executing children in order until one fails.
+In a real situation, each `tick()`'ed actions of the robot would not immediately return `SUCCESS` or `FAILURE` but will last several seconds or minutes to be achieved. Each action shall not take too much time to not block the tree `tick()` to make reactive the robot by allowing the execution of other nodes. For this reason it will return `RUNNING`.
 
-In our case, the three actions "open door", "walk" and "close door" are executed in this order and immediately return the status SUCCESS. While not all of these three actions have ended, the status of the sequence node is RUNNING. If one of the actions fails (FAILURE), the status of sequence node becomes FAILURE. If all actions end with SUCCESS, the status of sequence node becomes SUCCESS.
+### 📚 More Documentation on Behavior Trees
 
-In a real situation, each `tick()`'ed actions of the robot would not immediately return SUCCESS or FAILURE but will last several seconds or minutes to be achieved. Each action shall not take too much time to not block the tree `tick()` to make reactive the robot by allowing the execution of other nodes.
-
-### More Documentation on Behavior Tree
+You can read the following documents:
 
 - https://roboticseabass.com/2021/05/08/introduction-to-behavior-trees/
 - https://lisyarus.github.io/blog/posts/behavior-trees.html
 
 ---
 
-## Root
+## 🍃 The Different Type of Leaves
 
-The root can be any type of node.
+### 🟢 Always Success
 
-**Use Case Syntax:**
-
-```yaml
-behavior_tree:
-  Sequence:      # Root node type
-    children:
-      - Action:
-          name: CheckBattery
-      - Action:
-          name: PatrolArea
-```
-
-## Composite Nodes
-
-Composite nodes are control flow nodes that have one or more children. They determine the order and conditions under which their children are executed.
-
-In YAML, you should add `children:` and attach at least one child.
-
-### Sequence
-
-Can be remembered as `DoInOrder` since it executes children in order until one fails.
+Simple leaf that always returns SUCCESS. Do not confuse this leaf with the decorator `Succeeder`.
 
 **Behavior:**
 
-- Ticks each child node in order.
-- Returns SUCCESS if all children succeed.
-- Returns FAILURE if any child fails.
-- Returns RUNNING if any child is running.
+- Returns SUCCESS.
 
-**Use Case Syntax:**
+**YAML Syntax:**
+
+```yaml
+- Success
+```
+
+### 🔴 Always Failure
+
+Simple leaf that always returns FAILURE. Do not confuse this leaf with the decorator `Failer`.
+
+**Behavior:**
+
+- Returns FAILURE.
+
+**YAML Syntax:**
+
+```yaml
+- Failure
+```
+
+### ❓ Condition
+
+Evaluates a condition and returns SUCCESS or FAILURE. Useful for:
+
+- Boolean checks.
+- Sensor readings.
+- State validation.
+
+**Behavior:**
+
+- Returns SUCCESS if the condition is true.
+- Returns FAILURE if the condition is false.
+- Can never return RUNNING.
+
+**Example of YAML Syntax:**
+
+```yaml
+- Condition:
+    name: "IsEnemyVisible"
+    parameters:
+      range: 100.0
+```
+
+### 💬 Action
+
+Performs a short action or a chunk of a long action and returns a status.
+
+**Behavior:**
+
+- Return SUCCESS if action completes successfully.
+- Return FAILURE if action fails.
+- Return RUNNING if action is still executing (need more time before succeeding ot failing).
+
+**Example of YAML Syntax:**
+
+```yaml
+- Action:
+    name: "MoveToTarget"
+    parameters:
+      speed: 1.0
+      target: [10, 20]
+```
+
+---
+
+## 🎨 Decorator Nodes
+
+**YAML Syntax:** Since these nodes have a single child, their syntax follow this pattern:
+
+```yaml
+- <name>:
+    child:
+      - <node>:
+```
+
+### 🌖 Inverter
+
+Inverts the result of its child node. Useful for:
+
+- Checking if something is NOT true.
+- Creating "unless" conditions.
+- Inverting sensor readings.
+
+**Mnemonic:** Negate, Not.
+
+**Behavior:**
+
+- Return SUCCESS if child returns FAILURE.
+- Return FAILURE if child returns SUCCESS.
+- Return RUNNING if child returns RUNNING.
+
+**Example YAML Syntax:**
+
+```yaml
+- Inverter:
+    child:
+      - Condition:
+          name: "IsEnemyVisible"
+```
+
+### ✅ ForceSuccess
+
+Similar to the leaf `Success` but only transforms child failures: It always returns SUCCESS regardless of child's status. It is useful for:
+
+- Implementing "try but don't fail" semantics.
+- Optional tasks that shouldn't cause the whole sequence to fail.
+- Debugging behavior trees.
+- Temporarily disabling failure conditions.
+- Testing tree structure.
+
+**Behavior:**
+
+- If child returns SUCCESS or RUNNING, returns the same status.
+- If child returns FAILURE, returns SUCCESS instead.
+
+**Example YAML Syntax:**
+
+```yaml
+- Succeeder:
+    child:
+      - Action:
+          name: "OptionalTask"
+```
+
+### ❌ ForceFailure
+
+The opposite of `ForceSuccess`. Similar to the leaf `Failure` but only transforms child success: It always returns SUCCESS regardless of child's status. It is useful for:
+
+- Testing negative conditions.
+- Preventing specific success cases.
+- Implementing "succeed only if not" semantics.
+
+**Behavior:**
+
+- If child returns FAILURE or RUNNING, returns the same status.
+- If child returns SUCCESS, returns FAILURE instead.
+
+**Example YAML Syntax:**
+
+```yaml
+- ForceFailure:
+    child:
+      - Action:
+          name: "UndesiredResult"
+```
+
+### ♻️ Repeater
+
+Repeats its child node a specified number of times. It is useful for:
+
+- Retrying failed actions.
+- Implementing persistence behaviors.
+- Creating loops in behavior trees.
+
+**Behavior:**
+
+- Repeats child until it succeeds or reaches the limit.
+- Can be configured for infinite repetition.
+- Returns SUCCESS when child succeeds or limit is reached.
+- Returns RUNNING while repeating.
+
+**Example YAML Syntax:**
+
+```yaml
+- Repeater:
+    times: 3
+    child:
+      - Action:
+          name: "TryOpenDoor"
+```
+
+### ⏳ Timeout
+
+Limits the execution time of its child. Useful for:
+
+- Preventing actions from running too long.
+- Time-critical operations.
+- Implementing fallback triggers.
+
+**Behavior:**
+
+- Starts a timer when the child begins execution.
+- Returns FAILURE if the timeout is reached.
+- Otherwise, returns the child's status.
+
+**Example YAML Syntax:**
+
+```yaml
+- Timeout:
+    milliseconds: 5000
+    child:
+      - Action:
+          name: "LongRunningTask"
+```
+
+---
+
+## 🪵 Types de Composites
+
+### 🔢 Sequence
+
+It executes children in order until one fails. It logics is the `and` operator.
+
+**Mnemonic:** "And", "Do In Order".
+
+**Behavior:**
+
+- Tick each child node in order.
+- Return SUCCESS if all children succeed.
+- Return FAILURE if any child fails.
+- Return RUNNING if any child is running.
+
+**Use Case YAML Syntax:**
 
 ```yaml
 - Sequence:
@@ -206,7 +416,7 @@ Can be remembered as `DoInOrder` since it executes children in order until one f
           name: "CloseDoor"
 ```
 
-Perfect for tasks that must be completed in sequence, like:
+Used for tasks that must be completed in sequence, like:
 
 1. Open the door.
 2. Walk into the room.
@@ -214,9 +424,9 @@ Perfect for tasks that must be completed in sequence, like:
 
 **Beware:**
 
-If the action Walk fails, the door will remain open since the last action CloseDoor is skipped.
+If the action ``Walk fails, the door will remain open since the last action `CloseDoor` is skipped.
 
-### Parallel Sequence
+### 🪜 Parallel Sequence
 
 Executes all children simultaneously. It comes in two forms: `Parallel` and `ParallelAll`.
 
@@ -249,6 +459,7 @@ Executes all children simultaneously. It comes in two forms: `Parallel` and `Par
 ```
 
 Perfect for scenarios where:
+
 1. You need any one of several conditions to trigger a behavior.
 2. You want redundant systems where only some need to succeed.
 3. You need to monitor multiple conditions with different priorities.
@@ -278,9 +489,15 @@ Perfect for multitasking where:
 - `ParallelAll` is more strict, requiring all children to succeed.
 - Both execute all children at each tick regardless of individual results.
 
-### Sequence with Memory
+### ⏯️ Sequence with Memory
 
-Can be remembered as `ContinueInOrder` because it memorizes the point where it stopped.
+Same than `Sequence` but memorizes the point where it stopped. Used in:
+
+- Tasks that continue over multiple ticks.
+- Preserving progress in a sequence.
+- Avoiding redundant execution of already completed steps.
+
+**Mnemonic:** Continue In Order.
 
 **Behavior:**
 
@@ -303,15 +520,15 @@ Can be remembered as `ContinueInOrder` because it memorizes the point where it s
           name: "CompleteTask"
 ```
 
-Perfect for:
+### ⏮️ ReactiveSequence
 
-1. Tasks that continue over multiple ticks.
-2. Preserving progress in a sequence.
-3. Avoiding redundant execution of already completed steps.
+Same than `Sequence` but checks all previous children at each tick. Needed when:
 
-### ReactiveSequence
+- Conditions that must remain true throughout an action.
+- Safety checks that need constant verification.
+- Tasks that should stop immediately if prerequisites are no longer met.
 
-Can be remembered as `CheckAll` because it checks all previous children at each tick.
+**Mnemonic:** Check All
 
 **Behavior:**
 
@@ -333,15 +550,11 @@ Can be remembered as `CheckAll` because it checks all previous children at each 
           name: "MoveForward"
 ```
 
-Perfect for:
+### ❓ Fallback
 
-1. Conditions that must remain true throughout an action
-2. Safety checks that need constant verification
-3. Tasks that should stop immediately if prerequisites are no longer met
+Also known under the name of `Selector` in other documentation or project: it executes children in order until one succeeds.
 
-### Selector
-
-Also known under the name of `Fallback` in the documentation but can be remembered as `TryUntilSuccess` because it executes children in order until one succeeds.
+**Mnemonic:** Try Until Success.
 
 **Behavior:**
 
@@ -353,7 +566,7 @@ Also known under the name of `Fallback` in the documentation but can be remember
 **Use Case:**
 
 ```yaml
-- Selector:
+- Fallback:
     children:
       - Action:
           name: "FindEnemy"
@@ -363,15 +576,21 @@ Also known under the name of `Fallback` in the documentation but can be remember
           name: "ReturnToBase"
 ```
 
-Ideal for fallback behaviors:
+Explanation:
 
 1. Try to find an enemy.
 2. If no enemy found, patrol the area.
 3. If patrol fails, return to base.
 
-### Fallback with Memory
+### 🔄 Fallback with Memory
 
-Can be remembered as `RememberAndTry` because like `TryUntilSuccess` but memorizes the point where it stopped.
+Similar to `Fallback` because it "tries until success" but memorizes the point where it stopped. Perfect for:
+
+- Complex fallback scenarios that span multiple ticks.
+- Recovery strategies that need to continue from where they left off.
+- Avoiding restarting already attempted recovery steps.
+
+**Mnemonic:** Remember And Try
 
 **Behavior:**
 
@@ -394,15 +613,11 @@ Can be remembered as `RememberAndTry` because like `TryUntilSuccess` but memoriz
           name: "EmergencyProtocol"
 ```
 
-Perfect for:
+### 🔂 Reactive Fallback
 
-1. Complex fallback scenarios that span multiple ticks
-2. Recovery strategies that need to continue from where they left off
-3. Avoiding restarting already attempted recovery steps
+Similar to `Fallback` because it checks for success and tries again at each tick.
 
-### Reactive Fallback
-
-Can be remembered as `CheckUntilSuccess` because it checks for success and tries again at each tick.
+**Mnemonic:** Check Until Success
 
 **Behavior:**
 
@@ -432,216 +647,7 @@ Perfect for:
 2. Reactive planning that adapts to changing conditions.
 3. Implementing priority-based decisions that need constant reassessment.
 
----
-
-## Decorator Nodes
-
-Decorator nodes have exactly one child and modify its behavior.
-
-In YAML, you should add `child:` and attach exactly one child.
-
-### Inverter
-
-Inverts the result of its child node.
-
-**Behavior:**
-
-- Returns SUCCESS if child returns FAILURE.
-- Returns FAILURE if child returns SUCCESS.
-- Returns RUNNING if child returns RUNNING.
-
-**Use Case:**
-
-```yaml
-- Inverter:
-    child:
-      - Condition:
-          name: "IsEnemyVisible"
-```
-
-Useful for:
-
-- Checking if something is NOT true.
-- Creating "unless" conditions.
-- Inverting sensor readings.
-
-### Succeeder
-
-Always returns SUCCESS.
-
-**Behavior:**
-
-- Returns SUCCESS regardless of child's status.
-- Useful for debugging or forcing success.
-
-**Use Case:**
-
-```yaml
-- Succeeder:
-    child:
-      - Action:
-          name: "DebugAction"
-```
-
-Useful for:
-
-- Debugging behavior trees.
-- Temporarily disabling failure conditions.
-- Testing tree structure.
-
-### Repeater
-
-Repeats its child node a specified number of times.
-
-**Behavior:**
-
-- Repeats child until it succeeds or reaches the limit.
-- Can be configured for infinite repetition.
-- Returns SUCCESS when child succeeds or limit is reached.
-- Returns RUNNING while repeating.
-
-**Use Case:**
-
-```yaml
-- Repeater:
-    times: 3
-    child:
-      - Action:
-          name: "TryOpenDoor"
-```
-
-Perfect for:
-
-- Retrying failed actions.
-- Implementing persistence behaviors.
-- Creating loops in behavior trees.
-
-### ForceSuccess
-
-Similar to Succeeder but only transforms failures.
-
-**Behavior:**
-
-- If child returns SUCCESS or RUNNING, returns the same status.
-- If child returns FAILURE, returns SUCCESS instead.
-
-**Use Case:**
-
-```yaml
-- ForceSuccess:
-    child:
-      - Action:
-          name: "OptionalTask"
-```
-
-Useful for:
-
-- Optional tasks that shouldn't cause the whole sequence to fail.
-- Ignoring specific failure cases.
-- Implementing "try but don't fail" semantics.
-
-### ForceFailure
-
-The opposite of ForceSuccess.
-
-**Behavior:**
-
-- If child returns FAILURE or RUNNING, returns the same status.
-- If child returns SUCCESS, returns FAILURE instead.
-
-**Use Case:**
-
-```yaml
-- ForceFailure:
-    child:
-      - Action:
-          name: "UndesiredResult"
-```
-
-Useful for:
-
-- Testing negative conditions.
-- Preventing specific success cases.
-- Implementing "succeed only if not" semantics.
-
-### Timeout
-
-Limits the execution time of its child.
-
-**Behavior:**
-
-- Starts a timer when the child begins execution.
-- Returns FAILURE if the timeout is reached.
-- Otherwise, returns the child's status.
-
-**Use Case:**
-
-```yaml
-- Timeout:
-    milliseconds: 5000
-    child:
-      - Action:
-          name: "LongRunningTask"
-```
-
-Useful for:
-
-- Preventing actions from running too long.
-- Time-critical operations.
-- Implementing fallback triggers.
-
-## Leaf Nodes
-
-Leaf nodes are the actual behavior nodes that perform actions or check conditions.
-
-### Condition
-
-Evaluates a condition and returns SUCCESS or FAILURE.
-
-**Behavior:**
-
-- Checks a specific condition.
-- Returns SUCCESS if the condition is true.
-- Returns FAILURE if the condition is false.
-- Never returns RUNNING.
-
-**Example:**
-
-```yaml
-- Condition:
-    name: "IsEnemyVisible"
-    parameters:
-      range: 100.0
-```
-
-Useful for:
-
-- Boolean checks.
-- Sensor readings.
-- State validation.
-
-### Action
-
-Performs an action and returns a status.
-
-**Behavior:**
-
-- Executes the specified action.
-- Returns SUCCESS if action completes successfully.
-- Returns FAILURE if action fails.
-- Returns RUNNING if action is still executing.
-
-**Example:**
-
-```yaml
-- Action:
-    name: "MoveToTarget"
-    parameters:
-      speed: 1.0
-      target: [10, 20]
-```
-
-### Blackboard
+### 💾 Blackboard
 
 Shares data between nodes.
 
@@ -659,7 +665,7 @@ blackboard->set<int>("battery_level", 100);
 blackboard->set<bool>("enemy_detected", false);
 ```
 
-#### Blackboard Example Use Case
+### 📖 Blackboard Example Use Case
 
 Reading and writing to the blackboard:
 
@@ -673,14 +679,11 @@ std::string location = blackboard->get<std::string>("target_location");
 float distance = blackboard->getOr<float>("minimum_distance", 1.0f); // with default value
 ```
 
-### Creating Custom Actions
+### 🛠️ Creating Custom Actions
 
 There are two ways to create custom Action nodes:
 
-1. Inheritance from the `Action` class.
-2. Using a lambda function.
-
-#### 1. Inheritance Method
+##### 1️⃣ Inheritance Method
 
 Here is a template for a custom Action node:
 
@@ -713,7 +716,7 @@ public:
 };
 ```
 
-#### 2. Lambda Function Method
+##### 2️⃣ Lambda Function Method
 
 ```cpp
 // Register a simple action using a lambda
@@ -732,7 +735,7 @@ factory.registerAction("blackboard_action", [blackboard]() {
 
 ---
 
-## Example: Security Robot
+## 🤖 Example: Security Robot
 
 A complete example of a security robot behavior tree `security_robot.yaml`:
 
@@ -752,7 +755,7 @@ Let's create a simple behavior tree that makes a robot patrol an area:
 
 ```cpp
 #include "BehaviorTree/BehaviorTree.hpp"
-#include "BehaviorTree/TreeBuilder.hpp"
+#include "BehaviorTree/Builder.hpp"
 
 // Define our custom actions as class
 class CheckBattery : public bt::Action
@@ -797,7 +800,7 @@ int main()
     blackboard->set<int>("area_level", 42);
 
     auto factory = std::make_shared<SecurityRobotFactory>(blackboard);
-    bt::TreeBuilder builder(factory);
+    bt::Builder builder(factory);
 
     auto tree = builder.fromYAML("security_robot.yaml");
     assert(tree != nullptr);
@@ -812,14 +815,14 @@ int main()
 }
 ```
 
-### Using the Graphical Debugger
+### 🖥️ Using the Graphical Debugger
 
 The graphical debugger helps visualize and debug your behavior trees in real-time.
 
 1. Start the visualizer server:
 
 ```bash
-./build/BehaviorTreeViewer --port 9090
+./build/BehaviorTreeVisualizer --port 9090
 ```
 
 The application is empty and is waiting for a client to connect on the given port.
@@ -827,10 +830,10 @@ The application is empty and is waiting for a client to connect on the given por
 2. Add visualization to your application:
 
 ```cpp
-#include "BehaviorTree/BehaviorTreeVisualizer.hpp"
+#include "BehaviorTree/Visualizer.hpp"
 
 // Attach tree to visualizer client
-BehaviorTreeVisualizer visualizer(*tree, "127.0.0.1", 9090);
+Visualizer visualizer(*tree, "127.0.0.1", 9090);
 
 // Optional: Wait for connection
 while (!visualizer.isConnected())
@@ -848,11 +851,11 @@ while (true)
 
 You should see a real-time visualization of your behavior tree execution, showing the status of each node with color coding (green for SUCCESS, red for FAILURE, and orange for RUNNING).
 
-![BehaviorTreeViewer](docs/BehaviorTreeViewer.png)
+![BehaviorTreeVisualizer](docs/pics/BehaviorTreeVisualizer.png)
 
 ---
 
-## Behavior Tree API
+## 📋 API Reference
 
 The behavior tree is built using a clear class hierarchy that defines the structure and behavior of different node types:
 

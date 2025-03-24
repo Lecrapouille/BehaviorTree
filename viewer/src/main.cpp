@@ -79,7 +79,7 @@ static bool parse_arguments(int argc, char* argv[], uint16_t& port)
 
 int main(int argc, char* argv[])
 {
-    bt::BehaviorTreeViewer application;
+    bt::BehaviorTreeVisualizer application;
 
     // Default port
     uint16_t port = 9090;
@@ -91,7 +91,8 @@ int main(int argc, char* argv[])
     }
 
     // Initialize the application
-    if (!application.initialize(1280, 720, port))
+    unsigned int antialiasing_level = 0;
+    if (!application.initialize(1280, 720, port, antialiasing_level))
     {
         std::cerr << "Failed to initialize the application" << std::endl;
         return EXIT_FAILURE;

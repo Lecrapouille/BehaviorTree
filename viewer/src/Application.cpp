@@ -36,10 +36,10 @@
 namespace bt {
 
 // ----------------------------------------------------------------------------
-BehaviorTreeViewer::BehaviorTreeViewer() : m_path(GET_DATA_PATH) {}
+BehaviorTreeVisualizer::BehaviorTreeVisualizer() : m_path(GET_DATA_PATH) {}
 
 // ----------------------------------------------------------------------------
-BehaviorTreeViewer::~BehaviorTreeViewer()
+BehaviorTreeVisualizer::~BehaviorTreeVisualizer()
 {
     // Stop the debug server if it is active
     if (m_server != nullptr)
@@ -53,7 +53,7 @@ BehaviorTreeViewer::~BehaviorTreeViewer()
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeViewer::resetCamera()
+void BehaviorTreeVisualizer::resetCamera()
 {
     m_render_context.camera = m_render_context.window.getDefaultView();
     m_render_context.window.setView(m_render_context.camera);
@@ -62,17 +62,19 @@ void BehaviorTreeViewer::resetCamera()
 }
 
 // ----------------------------------------------------------------------------
-bool BehaviorTreeViewer::initialize(uint32_t p_width,
-                                    uint32_t p_height,
-                                    uint16_t p_port)
+bool BehaviorTreeVisualizer::initialize(uint32_t p_width,
+                                        uint32_t p_height,
+                                        uint16_t p_port,
+                                        unsigned int p_antialiasing)
 {
     // Store the dimensions and port
     m_render_context.width = p_width;
     m_render_context.height = p_height;
 
-    // Create the SFML window with anti-aliasing (4x MSAA)
+    // Create the SFML window with anti-aliasing
     sf::ContextSettings settings;
-    // settings.antialiasingLevel = 8; // High anti-aliasing level
+    settings.antialiasingLevel = p_antialiasing;
+
     m_render_context.window.create(
         sf::VideoMode(m_render_context.width, m_render_context.height),
         "Behavior Tree Viewer",
@@ -106,7 +108,7 @@ bool BehaviorTreeViewer::initialize(uint32_t p_width,
 }
 
 // ----------------------------------------------------------------------------
-bool BehaviorTreeViewer::loadResources()
+bool BehaviorTreeVisualizer::loadResources()
 {
     namespace fs = std::filesystem;
     bool result = true;
@@ -120,7 +122,7 @@ bool BehaviorTreeViewer::loadResources()
     }
 
     // Load the icons
-    fs::path icon_dir = fs::path(m_path.expand("icons/nodes"));
+    auto icon_dir = fs::path(m_path.expand("icons/nodes"));
     if ((!fs::exists(icon_dir)) || (!fs::is_directory(icon_dir)))
     {
         std::cerr << "Icon directory not found: " << icon_dir << std::endl;
@@ -145,9 +147,8 @@ bool BehaviorTreeViewer::loadResources()
                 {
                     std::cerr << "Failed to load the icon: " << entry.path()
                               << std::endl;
+                    result = false;
                 }
-
-                std::cout << "Icon loaded: " << icon_name << std::endl;
             }
         }
     }
@@ -156,25 +157,23 @@ bool BehaviorTreeViewer::loadResources()
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeViewer::initializeBackground()
+void BehaviorTreeVisualizer::initializeBackground()
 {
     // Create a rectangle for the background with gradient
     m_render_context.background.setPrimitiveType(sf::Quads);
     m_render_context.background.resize(4);
 
-    // Gradient colors inspired by the reference image
-    sf::Color topColor(30, 40, 60);    // Dark blue at the top
-    sf::Color bottomColor(15, 20, 35); // Very dark blue at the bottom
-
     // Define the vertices of the rectangle with gradient
-    float width = static_cast<float>(m_render_context.width);
-    float height = static_cast<float>(m_render_context.height);
+    const auto width = static_cast<float>(m_render_context.width);
+    const auto height = static_cast<float>(m_render_context.height);
     m_render_context.background[0].position = sf::Vector2f(0.0f, 0.0f);
     m_render_context.background[1].position = sf::Vector2f(width, 0.0f);
     m_render_context.background[2].position = sf::Vector2f(width, height);
     m_render_context.background[3].position = sf::Vector2f(0.0f, height);
 
     // Apply the gradient colors
+    const sf::Color topColor(30, 40, 60);    // Dark blue at the top
+    const sf::Color bottomColor(15, 20, 35); // Very dark blue at the bottom
     m_render_context.background[0].color = topColor;
     m_render_context.background[1].color = topColor;
     m_render_context.background[2].color = bottomColor;
@@ -182,7 +181,7 @@ void BehaviorTreeViewer::initializeBackground()
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeViewer::initializeHelpText(uint16_t p_port)
+void BehaviorTreeVisualizer::initializeHelpText(uint16_t p_port)
 {
     m_render_context.help_text.setFont(m_render_context.font);
     m_render_context.help_text.setString(
@@ -194,7 +193,7 @@ void BehaviorTreeViewer::initializeHelpText(uint16_t p_port)
 }
 
 // ----------------------------------------------------------------------------
-bool BehaviorTreeViewer::handleConnection(bool& p_was_connected)
+bool BehaviorTreeVisualizer::handleConnection(bool& p_was_connected)
 {
     // Check if the connection state has changed
     bool is_connected = (m_server != nullptr) && m_server->isConnected();
@@ -213,7 +212,7 @@ bool BehaviorTreeViewer::handleConnection(bool& p_was_connected)
 }
 
 // ----------------------------------------------------------------------------
-void BehaviorTreeViewer::run()
+void BehaviorTreeVisualizer::run()
 {
     // Variable to track the previous client-server connection state
     bool was_connected = false;
@@ -241,7 +240,7 @@ void BehaviorTreeViewer::run()
         m_render_context.window.draw(m_render_context.background);
 
         // Draw the tree with the camera view
-        if ((is_connected) && (m_tree_renderer != nullptr))
+        if (is_connected && (m_tree_renderer != nullptr))
         {
             // Use the view from TreeRenderer
             m_render_context.window.setView(m_tree_renderer->getCamera());

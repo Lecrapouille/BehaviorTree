@@ -3,8 +3,8 @@
 //*****************************************************************************
 
 #include "BehaviorTree/BehaviorTree.hpp"
-#include "BehaviorTree/BehaviorTreeVisualizer.hpp"
-#include "BehaviorTree/TreeBuilder.hpp"
+#include "BehaviorTree/Builder.hpp"
+#include "BehaviorTree/Visualizer.hpp"
 #include <algorithm>
 #include <chrono>
 #include <iostream>
@@ -170,11 +170,11 @@ void runDemo()
 
     // Create the factory with custom actions
     SecurityRobotFactory factory(blackboard);
-    bt::TreeBuilder builder;
+    bt::Builder builder;
 
     // Load the tree from the YAML file
-    auto tree =
-        builder.fromFile(factory, "demos/security_robot/security_robot.yaml");
+    auto tree = builder.fromFile(
+        factory, "docs/demos/security_robot/security_robot.yaml");
     if (!tree)
     {
         std::cerr << "Failed to load behavior tree from YAML\n";
@@ -182,7 +182,7 @@ void runDemo()
     }
 
     // Initialize the connection with the visualizer
-    BehaviorTreeVisualizer visualizer(*tree); // TODO: observer ?
+    Visualizer visualizer(*tree); // TODO: observer ?
     if (auto ec =
             visualizer.connect("127.0.0.1", 9090, std::chrono::seconds(5)))
     {
@@ -206,7 +206,10 @@ void runDemo()
             blackboard->set<bool>("threat_detected", false);
 
         // Update the tree
-        tree->tick();
+        if (tree->tick() != Status::RUNNING)
+        {
+            std::cout << "Tree is finished\n";
+        }
 
         // Update the visualizer
         visualizer.tick(); // TODO: hidden by an observer pattern ?
