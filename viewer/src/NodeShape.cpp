@@ -45,9 +45,9 @@ NodeShape::NodeShape()
     }
 
     // Initialize default colors
-    m_mainColor = sf::Color(24, 35, 64);         // Dark blue (top)
-    m_secondaryColor = sf::Color(16, 24, 45);    // Very dark blue (bottom)
-    m_borderColor = sf::Color(0, 255, 255, 200); // Cyan semi-transparent
+    m_main_color = sf::Color(24, 35, 64);         // Dark blue (top)
+    m_secondary_color = sf::Color(16, 24, 45);    // Very dark blue (bottom)
+    m_border_color = sf::Color(0, 255, 255, 200); // Cyan semi-transparent
 
     // Do not initialize the text here, it will be created in setText()
     updateGeometry();
@@ -95,9 +95,9 @@ void NodeShape::setColors(const sf::Color& p_main_color,
                           const sf::Color& p_border_color)
 {
     // Gradient colors and border color
-    m_mainColor = p_main_color;
-    m_secondaryColor = p_secondary_color;
-    m_borderColor = p_border_color;
+    m_main_color = p_main_color;
+    m_secondary_color = p_secondary_color;
+    m_border_color = p_border_color;
 
     // Update gradient colors
     m_gradient_vertices[0].color = p_main_color;
@@ -113,7 +113,7 @@ void NodeShape::setColors(const sf::Color& p_main_color,
 // ----------------------------------------------------------------------------
 void NodeShape::setTextSmoothing(bool p_smooth)
 {
-    m_textSmoothing = p_smooth;
+    m_text_smoothing = p_smooth;
 
     // If the text exists, update its properties
     if (m_text.getFont() != nullptr)
@@ -180,20 +180,20 @@ void NodeShape::updateGeometry()
     // Calculate dimensions if the text has a valid font
     if (m_text.getFont())
     {
-        sf::FloatRect textBounds = m_text.getLocalBounds();
-        sf::FloatRect iconBounds;
+        sf::FloatRect text_bounds = m_text.getLocalBounds();
+        sf::FloatRect icon_bounds;
 
         // Take into account the icon only if a texture is defined
-        float iconWidth = 0.0f;
+        float icon_width = 0.0f;
         if (m_icon.getTexture())
         {
-            iconBounds = m_icon.getGlobalBounds();
-            iconWidth = iconBounds.width + ICON_TEXT_SPACING;
+            icon_bounds = m_icon.getGlobalBounds();
+            icon_width = icon_bounds.width + ICON_TEXT_SPACING;
         }
 
         // Calculate the width and height with appropriate spacing
-        width = textBounds.width + iconWidth + m_padding.x * 2.0f;
-        height = std::max(textBounds.height, iconBounds.height);
+        width = text_bounds.width + icon_width + m_padding.x * 2.0f;
+        height = std::max(text_bounds.height, icon_bounds.height);
         height += m_padding.y * 2.0f;
 
         // Minimum dimensions
@@ -201,20 +201,21 @@ void NodeShape::updateGeometry()
         height = std::max(height, MIN_HEIGHT);
 
         // Center the text vertically and position after the icon
-        m_text.setOrigin(0, textBounds.top + textBounds.height / 2.0f);
-        float textX = m_padding.x + iconWidth;
-        float textY = height / 2.0f;
-        m_text.setPosition(textX, textY);
+        m_text.setOrigin(0, text_bounds.top + text_bounds.height / 2.0f);
+        float text_x = m_padding.x + icon_width;
+        float text_y = height / 2.0f;
+        m_text.setPosition(text_x, text_y);
 
         // Position the icon if available
         if (m_icon.getTexture())
         {
-            m_icon.setOrigin(0, iconBounds.height / 2.0f);
-            m_icon.setPosition(m_padding.x, height / 2.0f);
+            m_icon.setOrigin(icon_bounds.width / 2.0f,
+                             icon_bounds.height / 2.0f);
+            m_icon.setPosition(m_padding);
         }
     }
 
-    m_currentSize = {width, height};
+    m_current_size = {width, height};
 
     // Update the rounded rectangle and the border
     updateRoundedRectangle();
@@ -224,8 +225,8 @@ void NodeShape::updateGeometry()
 // ----------------------------------------------------------------------------
 void NodeShape::updateRoundedRectangle()
 {
-    float width = m_currentSize.x;
-    float height = m_currentSize.y;
+    float width = m_current_size.x;
+    float height = m_current_size.y;
     float radius = m_radius;
 
     // Limit the radius to half of the smallest dimension
@@ -237,95 +238,95 @@ void NodeShape::updateRoundedRectangle()
     // Add the center point for the triangle fan
     m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(width / 2.0f, height / 2.0f),
-                   interpolateColor(m_mainColor, m_secondaryColor, 0.5f)));
+                   interpolateColor(m_main_color, m_secondary_color, 0.5f)));
 
     // Number of segments for the rounded corners (higher = smoother)
-    const int cornerSegments = 8;
+    const int corner_segments = 8;
 
     // Create the vertices for the rounded rectangle with gradient
 
     // Top left corner
-    for (int i = 0; i <= cornerSegments; ++i)
+    for (int i = 0; i <= corner_segments; ++i)
     {
         float angle =
-            M_PIf + (M_PIf / 2.0f) * static_cast<float>(i) / cornerSegments;
+            M_PIf + (M_PIf / 2.0f) * static_cast<float>(i) / corner_segments;
         float x = radius + radius * cosf(angle);
         float y = radius + radius * sinf(angle);
-        sf::Vertex vertex(sf::Vector2f(x, y), m_mainColor);
+        sf::Vertex vertex(sf::Vector2f(x, y), m_main_color);
         m_rounded_rectangle.append(vertex);
     }
 
     // Top edge
     m_rounded_rectangle.append(
-        sf::Vertex(sf::Vector2f(radius, 0), m_mainColor));
+        sf::Vertex(sf::Vector2f(radius, 0), m_main_color));
     m_rounded_rectangle.append(
-        sf::Vertex(sf::Vector2f(width - radius, 0), m_mainColor));
+        sf::Vertex(sf::Vector2f(width - radius, 0), m_main_color));
 
     // Top right corner
-    for (int i = 0; i <= cornerSegments; ++i)
+    for (int i = 0; i <= corner_segments; ++i)
     {
         float angle = 3.0f * M_PIf / 2.0f +
-                      (M_PIf / 2.0f) * static_cast<float>(i) / cornerSegments;
+                      (M_PIf / 2.0f) * static_cast<float>(i) / corner_segments;
         float x = width - radius + radius * cosf(angle);
         float y = radius + radius * sinf(angle);
-        sf::Vertex vertex(sf::Vector2f(x, y), m_mainColor);
+        sf::Vertex vertex(sf::Vector2f(x, y), m_main_color);
         m_rounded_rectangle.append(vertex);
     }
 
     // Right edge
     m_rounded_rectangle.append(
-        sf::Vertex(sf::Vector2f(width, radius), m_mainColor));
+        sf::Vertex(sf::Vector2f(width, radius), m_main_color));
     m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(width, height - radius),
-                   interpolateColor(m_mainColor, m_secondaryColor, 0.7f)));
+                   interpolateColor(m_main_color, m_secondary_color, 0.7f)));
 
     // Bottom right corner
-    for (int i = 0; i <= cornerSegments; ++i)
+    for (int i = 0; i <= corner_segments; ++i)
     {
         float angle =
-            0 + (M_PIf / 2.0f) * static_cast<float>(i) / cornerSegments;
+            0 + (M_PIf / 2.0f) * static_cast<float>(i) / corner_segments;
         float x = width - radius + radius * cosf(angle);
         float y = height - radius + radius * sinf(angle);
-        sf::Vertex vertex(sf::Vector2f(x, y), m_secondaryColor);
+        sf::Vertex vertex(sf::Vector2f(x, y), m_secondary_color);
         m_rounded_rectangle.append(vertex);
     }
 
     // Bottom edge
     m_rounded_rectangle.append(
-        sf::Vertex(sf::Vector2f(width - radius, height), m_secondaryColor));
+        sf::Vertex(sf::Vector2f(width - radius, height), m_secondary_color));
     m_rounded_rectangle.append(
-        sf::Vertex(sf::Vector2f(radius, height), m_secondaryColor));
+        sf::Vertex(sf::Vector2f(radius, height), m_secondary_color));
 
     // Bottom left corner
-    for (int i = 0; i <= cornerSegments; ++i)
+    for (int i = 0; i <= corner_segments; ++i)
     {
         float angle = M_PIf / 2.0f +
-                      (M_PIf / 2.0f) * static_cast<float>(i) / cornerSegments;
+                      (M_PIf / 2.0f) * static_cast<float>(i) / corner_segments;
         float x = radius + radius * cosf(angle);
         float y = height - radius + radius * sinf(angle);
-        sf::Vertex vertex(sf::Vector2f(x, y), m_secondaryColor);
+        sf::Vertex vertex(sf::Vector2f(x, y), m_secondary_color);
         m_rounded_rectangle.append(vertex);
     }
 
     // Left edge
     m_rounded_rectangle.append(
         sf::Vertex(sf::Vector2f(0, height - radius),
-                   interpolateColor(m_mainColor, m_secondaryColor, 0.7f)));
+                   interpolateColor(m_main_color, m_secondary_color, 0.7f)));
     m_rounded_rectangle.append(
-        sf::Vertex(sf::Vector2f(0, radius), m_mainColor));
+        sf::Vertex(sf::Vector2f(0, radius), m_main_color));
 
     // Close the contour
-    float angle = M_PIf + (M_PIf / 2.0f) * 0 / cornerSegments;
+    float angle = M_PIf + (M_PIf / 2.0f) * 0 / corner_segments;
     float x = radius + radius * cosf(angle);
     float y = radius + radius * sinf(angle);
-    m_rounded_rectangle.append(sf::Vertex(sf::Vector2f(x, y), m_mainColor));
+    m_rounded_rectangle.append(sf::Vertex(sf::Vector2f(x, y), m_main_color));
 }
 
 // ----------------------------------------------------------------------------
 void NodeShape::updateBorder()
 {
-    float width = m_currentSize.x;
-    float height = m_currentSize.y;
+    float width = m_current_size.x;
+    float height = m_current_size.y;
     float radius = m_radius;
 
     // Limit the radius to half of the smallest dimension
@@ -338,26 +339,26 @@ void NodeShape::updateBorder()
     m_border.setPrimitiveType(sf::TriangleStrip);
 
     // Border thickness
-    float borderThickness = 2.0f;
+    float border_thickness = 2.0f;
 
     // Number of segments for the rounded corners
-    const int cornerSegments = 16; // More segments for a smoother border
+    const int corner_segments = 16; // More segments for a smoother border
 
     // Function to add two points to the border (inner and outer)
     auto addBorderPoints = [&](float x, float y, float nx, float ny) {
         // Inner point
-        m_border.append(sf::Vertex(sf::Vector2f(x, y), m_borderColor));
+        m_border.append(sf::Vertex(sf::Vector2f(x, y), m_border_color));
         // Outer point
         m_border.append(sf::Vertex(
-            sf::Vector2f(x + nx * borderThickness, y + ny * borderThickness),
-            m_borderColor));
+            sf::Vector2f(x + nx * border_thickness, y + ny * border_thickness),
+            m_border_color));
     };
 
     // Top left corner
-    for (int i = 0; i <= cornerSegments; ++i)
+    for (int i = 0; i <= corner_segments; ++i)
     {
         float angle =
-            M_PIf + (M_PIf / 2.0f) * static_cast<float>(i) / cornerSegments;
+            M_PIf + (M_PIf / 2.0f) * static_cast<float>(i) / corner_segments;
         float x = radius + radius * cosf(angle);
         float y = radius + radius * sinf(angle);
         float nx = cosf(angle); // Normal x
@@ -370,10 +371,10 @@ void NodeShape::updateBorder()
     addBorderPoints(width - radius, 0, 0, -1);
 
     // Top right corner
-    for (int i = 0; i <= cornerSegments; ++i)
+    for (int i = 0; i <= corner_segments; ++i)
     {
         float angle = 3.0f * M_PIf / 2.0f +
-                      (M_PIf / 2.0f) * static_cast<float>(i) / cornerSegments;
+                      (M_PIf / 2.0f) * static_cast<float>(i) / corner_segments;
         float x = width - radius + radius * cosf(angle);
         float y = radius + radius * sinf(angle);
         float nx = cosf(angle); // Normal x
@@ -386,10 +387,10 @@ void NodeShape::updateBorder()
     addBorderPoints(width, height - radius, 1, 0);
 
     // Bottom right corner
-    for (int i = 0; i <= cornerSegments; ++i)
+    for (int i = 0; i <= corner_segments; ++i)
     {
         float angle =
-            0 + (M_PIf / 2.0f) * static_cast<float>(i) / cornerSegments;
+            0 + (M_PIf / 2.0f) * static_cast<float>(i) / corner_segments;
         float x = width - radius + radius * cosf(angle);
         float y = height - radius + radius * sinf(angle);
         float nx = cosf(angle); // Normal x
@@ -402,10 +403,10 @@ void NodeShape::updateBorder()
     addBorderPoints(radius, height, 0, 1);
 
     // Bottom left corner
-    for (int i = 0; i <= cornerSegments; ++i)
+    for (int i = 0; i <= corner_segments; ++i)
     {
         float angle = M_PIf / 2.0f +
-                      (M_PIf / 2.0f) * static_cast<float>(i) / cornerSegments;
+                      (M_PIf / 2.0f) * static_cast<float>(i) / corner_segments;
         float x = radius + radius * cosf(angle);
         float y = height - radius + radius * sinf(angle);
         float nx = cosf(angle); // Normal x
@@ -418,12 +419,12 @@ void NodeShape::updateBorder()
     addBorderPoints(0, radius, -1, 0);
 
     // Close the border by returning to the first point
-    float closeAngle = M_PIf + (M_PIf / 2.0f) * 0 / cornerSegments;
-    float closeX = radius + radius * cosf(closeAngle);
-    float closeY = radius + radius * sinf(closeAngle);
-    float closeNx = cosf(closeAngle);
-    float closeNy = sinf(closeAngle);
-    addBorderPoints(closeX, closeY, closeNx, closeNy);
+    float close_angle = M_PIf + (M_PIf / 2.0f) * 0 / corner_segments;
+    float close_x = radius + radius * cosf(close_angle);
+    float close_y = radius + radius * sinf(close_angle);
+    float close_nx = cosf(close_angle);
+    float close_ny = sinf(close_angle);
+    addBorderPoints(close_x, close_y, close_nx, close_ny);
 }
 
 // ----------------------------------------------------------------------------

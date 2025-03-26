@@ -47,7 +47,7 @@ void TreeRenderer::reset()
 }
 
 // ----------------------------------------------------------------------------
-bool TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
+bool TreeRenderer::handleMessage(std::vector<uint8_t> const& data)
 {
     // Ignore empty messages
     if (data.empty())
@@ -139,7 +139,7 @@ bool TreeRenderer::handleMessage(const std::vector<uint8_t>& data)
 }
 
 // ----------------------------------------------------------------------------
-void TreeRenderer::createNodes(const YAML::Node& yaml_node, uint32_t& next_id)
+void TreeRenderer::createNodes(YAML::Node const& yaml_node, uint32_t& next_id)
 {
     for (auto const& item : yaml_node)
     {
@@ -178,8 +178,7 @@ void TreeRenderer::createNodes(const YAML::Node& yaml_node, uint32_t& next_id)
         node.shape->setPadding(20.0f, 15.0f);
         node.shape->setCornerRadius(10.0f);
         node.shape->setTextSmoothing(false);
-        setNodeIcon(node.shape.get(), "sequence", 0.25f);
-        // node.name.c_str());
+        setNodeIcon(node.shape.get(), node.name, 0.25f);
 
         // Process the children if they are available (for composite nodes)
         if (properties.IsMap() && properties["children"])
@@ -391,24 +390,17 @@ void TreeRenderer::debugPrintNodes() const
 
 // ----------------------------------------------------------------------------
 void TreeRenderer::setNodeIcon(NodeShape* p_node_shape,
-                               const char* p_name,
+                               const std::string& p_name,
                                float p_scale) const
 {
-    if (m_icons.empty())
-        return;
+    return;
 
     // Try to find an icon matching the node name
-    std::string node_name(p_name);
-    auto icon_it = m_icons.find(node_name);
+    auto icon_it = m_icons.find(p_name);
     if (icon_it != m_icons.end())
     {
         // Use the matching icon with a smaller scale
         p_node_shape->setIcon(icon_it->second, p_scale);
-    }
-    else if (!m_icons.empty())
-    {
-        // Use the first available icon as default with a smaller scale
-        p_node_shape->setIcon(m_icons.begin()->second, p_scale);
     }
 }
 

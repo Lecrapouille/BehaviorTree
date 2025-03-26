@@ -95,7 +95,7 @@ public:
     // ------------------------------------------------------------------------
     sf::Vector2f getDimensions() const
     {
-        return m_currentSize;
+        return m_current_size;
     }
 
 private:
@@ -153,15 +153,15 @@ private:
     //! \brief Radius.
     float m_radius{8.0f};
     //! \brief Current size.
-    sf::Vector2f m_currentSize{100.0f, 40.0f};
+    sf::Vector2f m_current_size{100.0f, 40.0f};
     //! \brief Main color.
-    sf::Color m_mainColor;
+    sf::Color m_main_color;
     //! \brief Secondary color.
-    sf::Color m_secondaryColor;
+    sf::Color m_secondary_color;
     //! \brief Border color.
-    sf::Color m_borderColor;
+    sf::Color m_border_color;
     //! \brief Text smoothing.
-    bool m_textSmoothing{true};
+    bool m_text_smoothing{true};
 };
 
 } // namespace bt

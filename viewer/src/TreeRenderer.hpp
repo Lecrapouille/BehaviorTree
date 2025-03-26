@@ -60,14 +60,12 @@ private:
     // ************************************************************************
     struct NodeInfo
     {
-        uint32_t id;           //!< Node ID
-        std::string name;      //!< Node name
-        bt::Status status;     //!< Node status
-        sf::Vector2f position; //!< Node position
-        NodeInfo*
-            parent; //!< Parent node (raw pointer because it's a back reference)
-        std::vector<NodeInfo*> children;  //!< Children nodes (raw pointers
-                                          //!< because they are back references)
+        uint32_t id;                      //!< Node ID
+        std::string name;                 //!< Node name
+        bt::Status status;                //!< Node status
+        sf::Vector2f position;            //!< Node position
+        NodeInfo* parent;                 //!< Parent node
+        std::vector<NodeInfo*> children;  //!< Children nodes
         std::unique_ptr<NodeShape> shape; //!< Node shape
     };
 
@@ -96,7 +94,7 @@ public:
     //! \param[in] data Message data.
     //! \return True if the message was processed, false otherwise.
     // ------------------------------------------------------------------------
-    bool handleMessage(const std::vector<uint8_t>& data);
+    bool handleMessage(std::vector<uint8_t> const& data);
 
     // ------------------------------------------------------------------------
     //! \brief Center the camera on the window.
@@ -133,7 +131,7 @@ private:
     //! \param[in] node YAML node.
     //! \param[in,out] next_id Next available ID.
     // ------------------------------------------------------------------------
-    void createNodes(const YAML::Node& node, uint32_t& next_id);
+    void createNodes(YAML::Node const& node, uint32_t& next_id);
 
     // ------------------------------------------------------------------------
     //! \brief Set node icon.
@@ -142,7 +140,7 @@ private:
     //! \param[in] p_scale Icon scale.
     // ------------------------------------------------------------------------
     void setNodeIcon(NodeShape* p_node_shape,
-                     const char* p_name,
+                     std::string const& p_name,
                      float p_scale) const;
 
     // ------------------------------------------------------------------------
