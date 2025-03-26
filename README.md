@@ -1,6 +1,8 @@
 # 🌳 Behavior Tree (BT)
 
-A lightweight **behavior trees** C++14 library with its real-time visualizer of the state of the tree.
+A lightweight **behavior trees** C++14 library with a real-time visualizer application.
+
+**⚠️ Warning: This library is still on its early stage. Use it with caution !**
 
 This library is based on [BrainTree](https://github.com/arvidsson/BrainTree), which is no longer maintained.
 It offers a simpler codebase than [BehaviorTree.CPP](https://github.com/BehaviorTree/BehaviorTree.CPP).
@@ -21,8 +23,6 @@ This library BrainTree extends by implementing the following features:
 - YAML format as tree description for building trees.
 - Export trees to other formats (mermaid, groot2).
 - Real-time graphical debugger.
-
-**⚠️ Warning: This library is still on its early stage. Use it with caution !**
 
 ---
 
@@ -140,7 +140,9 @@ The execution engine for a tree is single-threaded. Nodes are executed in discre
 
 - Each tick represents one update cycle of the behavior tree. Ticks occur at a frequency determined by the application (e.g., 10Hz for a robot, 60Hz for a game).
 - A tick is a propagation of execution signals from parent to children. It flows down the tree from the root to the leaves following specific rules for each node type.
-- When a node is ticked, it executes its logic and returns a **status** (SUCCESS, FAILURE, RUNNING). Since the logic is not executed inside a thread, the execution should return as soon as possible to avoid blocking the entire flow of execution of the tree. To avoid blocking, the logic shall be split:
+- When a node is ticked, it executes its logic and returns a **status** (SUCCESS, FAILURE, RUNNING). Since the logic is not executed inside a thread, the execution should return as soon as possible to avoid blocking the entire flow of execution of the tree.
+
+**Status**:
   - **SUCCESS** (green): The task was completed successfully.
   - **FAILURE** (red): The task could not be completed or a condition was not met.
   - **RUNNING** (orange): The task is still in progress and needs more time to complete.
