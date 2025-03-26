@@ -139,7 +139,7 @@ The execution engine for a tree is single-threaded. Nodes are executed in discre
 **Tick**: is the fundamental execution mechanism in behavior trees:
 
 - Each tick represents one update cycle of the behavior tree. Ticks occur at a frequency determined by the application (e.g., 10Hz for a robot, 60Hz for a game).
-- A tick is a propagation of execution signals from parent to children. It flows down the tree from the root to the leaves following specific rules for each node type.
+- A tick is a propagation of execution signals from parent to children. It flows down the tree from the root to the leaves following specific rules for each node type. When a parent node is ticked, it decides which children to tick based on its type.
 - When a node is ticked, it executes its logic and returns a **status** (SUCCESS, FAILURE, RUNNING). Since the logic is not executed inside a thread, the execution should return as soon as possible to avoid blocking the entire flow of execution of the tree.
 
 **Status**:
@@ -149,7 +149,6 @@ The execution engine for a tree is single-threaded. Nodes are executed in discre
 
 **Execution Flow**: The `tick()` function implements a template method pattern with hooks for `onSetUp()`, `onRunning()` and `onTearDown()`.
 
-- When a parent node is ticked, it decides which children to tick based on its type.
 - A node calls `onSetUp()` on the first execution. This allows for initialization that can either succeed (SUCCESS) or fail (FAILURE).
 - A node calls `onRunning()` on subsequent ticks, returning SUCCESS, FAILURE, or RUNNING.
 - When a node transitions from RUNNING to SUCCESS/FAILURE, `onTearDown()` is called. This allows for cleanup operations.
