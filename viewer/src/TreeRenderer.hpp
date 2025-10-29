@@ -60,9 +60,10 @@ private:
     // ************************************************************************
     struct NodeInfo
     {
-        uint32_t id;                      //!< Node ID
-        std::string name;                 //!< Node name
-        bt::Status status;                //!< Node status
+        uint32_t id;       //!< Node ID
+        std::string name;  //!< Node name
+        std::string type;  //!< Node type (sequence, selector, parallel, etc.)
+        bt::Status status; //!< Node status
         sf::Vector2f position;            //!< Node position
         NodeInfo* parent;                 //!< Parent node
         std::vector<NodeInfo*> children;  //!< Children nodes

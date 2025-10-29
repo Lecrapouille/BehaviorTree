@@ -35,31 +35,37 @@ class Node;
 namespace bt {
 
 // ****************************************************************************
-//! \brief Class responsible for building behavior trees from YAML/XML files.
+//! \brief Builder class for creating behavior trees from YAML.
 // ****************************************************************************
 class Builder
 {
 public:
 
-    // ------------------------------------------------------------------------
-    //! \brief Create a behavior tree from YAML file.
-    //! \param[in] p_file_path Path to the YAML file.
-    //! \return Unique pointer to the created behavior tree.
-    // ------------------------------------------------------------------------
-    static std::unique_ptr<Tree> fromFile(NodeFactory const& p_factory,
-                                          std::string const& p_file_path);
+    // --------------------------------------------------------------------------
+    //! \brief Create a behavior tree from a YAML file.
+    //! \param[in] factory The factory to create custom nodes.
+    //! \param[in] file_path The path to the YAML file.
+    //! \return The created behavior tree.
+    // --------------------------------------------------------------------------
+    static std::unique_ptr<Tree> fromFile(NodeFactory const& factory,
+                                          std::string const& file_path);
 
-    // ------------------------------------------------------------------------
-    //! \brief Create a behavior tree from YAML text string.
-    //! \param[in] p_yaml_text String containing the YAML definition.
-    //! \return Unique pointer to the created behavior tree.
-    // ------------------------------------------------------------------------
-    static std::unique_ptr<Tree> fromText(NodeFactory const& p_factory,
-                                          std::string const& p_yaml_text);
+    // --------------------------------------------------------------------------
+    //! \brief Create a behavior tree from YAML text.
+    //! \param[in] factory The factory to create custom nodes.
+    //! \param[in] yaml_text The YAML text describing the tree.
+    //! \return The created behavior tree.
+    // --------------------------------------------------------------------------
+    static std::unique_ptr<Tree> fromText(NodeFactory const& factory,
+                                          std::string const& yaml_text);
 
-private:
-
-    static Node::Ptr parseYAMLNode(NodeFactory const& p_factory,
+    // --------------------------------------------------------------------------
+    //! \brief Parse a YAML node into a behavior tree node.
+    //! \param[in] factory The factory to create custom nodes.
+    //! \param[in] node The YAML node to parse.
+    //! \return The created behavior tree node.
+    // --------------------------------------------------------------------------
+    static Node::Ptr parseYAMLNode(NodeFactory const& factory,
                                    YAML::Node const& node);
 };
 

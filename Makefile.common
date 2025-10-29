@@ -1,6 +1,3 @@
-###################################################
-# Project definition
-#
 PROJECT_NAME := BehaviorTree
 PROJECT_VERSION := 0.1.0
 COMPILATION_MODE := debug

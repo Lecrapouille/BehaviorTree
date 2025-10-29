@@ -75,10 +75,10 @@ bool TreeRenderer::handleMessage(std::vector<uint8_t> const& data)
             YAML::Node root = YAML::Load(yaml_str);
 
             // Process the root node (behavior_tree)
-            if (root["behavior_tree"])
+            if (root["BehaviorTree"])
             {
                 uint32_t next_id = 0;
-                createNodes(root["behavior_tree"], next_id);
+                createNodes(root["BehaviorTree"], next_id);
                 calculateNodePositions();
                 centerCamera(m_window);
                 debugPrintNodes();
@@ -147,7 +147,8 @@ void TreeRenderer::createNodes(YAML::Node const& yaml_node, uint32_t& next_id)
         YAML::Node properties = item.second;
 
         // Store the node with its ID
-        uint32_t node_id = next_id++;
+        uint32_t node_id = next_id;
+        next_id += 1u;
 
         // Create the node information
         m_nodes[node_id] = std::make_unique<NodeInfo>();
@@ -155,6 +156,10 @@ void TreeRenderer::createNodes(YAML::Node const& yaml_node, uint32_t& next_id)
         node.id = node_id;
         node.parent = nullptr;
         node.status = bt::INVALID_STATUS;
+        node.type = node_type;
+        std::transform(
+            node.type.begin(), node.type.end(), node.type.begin(), ::tolower);
+        std::cout << "Node type: " << node_type << std::endl;
 
         // Handle node name based on properties type
         if (properties.IsMap())
@@ -178,7 +183,7 @@ void TreeRenderer::createNodes(YAML::Node const& yaml_node, uint32_t& next_id)
         node.shape->setPadding(20.0f, 15.0f);
         node.shape->setCornerRadius(10.0f);
         node.shape->setTextSmoothing(false);
-        setNodeIcon(node.shape.get(), node.name, 0.25f);
+        setNodeIcon(node.shape.get(), node.type, 0.25f);
 
         // Process the children if they are available (for composite nodes)
         if (properties.IsMap() && properties["children"])
@@ -393,9 +398,7 @@ void TreeRenderer::setNodeIcon(NodeShape* p_node_shape,
                                const std::string& p_name,
                                float p_scale) const
 {
-    return;
-
-    // Try to find an icon matching the node name
+    // Try to find an icon matching the node type
     auto icon_it = m_icons.find(p_name);
     if (icon_it != m_icons.end())
     {

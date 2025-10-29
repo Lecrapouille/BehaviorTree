@@ -5,6 +5,7 @@ This demo showcases a simple security robot behavior tree implementation using v
 ## Overview
 
 The security robot has the following behaviors:
+
 - Battery management (monitoring and recharging)
 - Area patrolling
 - Threat detection
@@ -13,6 +14,7 @@ The security robot has the following behaviors:
 ## Behavior Tree Structure
 
 The behavior tree is defined in `security_robot.yaml` and uses the following node types:
+
 - `Selector`: For main decision making
 - `Sequence`: For ordered execution of tasks
 - `ParallelSequence`: For concurrent execution of patrol and threat detection

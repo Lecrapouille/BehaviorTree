@@ -52,7 +52,7 @@ std::string Exporter::toYAML(Tree const& tree)
         return {};
 
     YAML::Node root;
-    root["behavior_tree"] = generateYAMLNode(&(tree.getRoot()));
+    root["BehaviorTree"] = generateYAMLNode(&(tree.getRoot()));
     return YAML::Dump(root);
 }
 
@@ -248,7 +248,7 @@ YAML::Node Exporter::generateYAMLNode(Node const* node)
     }
     else
     {
-        throw std::runtime_error("Unknown node type");
+        throw std::runtime_error("generateYAMLNode: Unknown node type");
     }
 
     return yaml_node;

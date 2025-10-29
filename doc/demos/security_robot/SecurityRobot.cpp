@@ -174,7 +174,7 @@ void runDemo()
 
     // Load the tree from the YAML file
     auto tree = builder.fromFile(
-        factory, "docs/demos/security_robot/security_robot.yaml");
+        factory, "doc/demos/security_robot/security_robot.yaml");
     if (!tree)
     {
         std::cerr << "Failed to load behavior tree from YAML\n";

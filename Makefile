@@ -50,11 +50,6 @@ INCLUDES += $(P) $(P)/src $(P)/include
 include $(M)/rules/Makefile
 
 ###################################################
-# Extra rules
-#
-all:: viewer demos
-
-###################################################
 # Behavior Tree Viewer
 #
 .PHONY: viewer
@@ -65,11 +60,11 @@ viewer:
 ###################################################
 # Compile demos
 #
-DEMOS = $(sort $(dir $(wildcard ./docs/demos/*/.)))
+DEMOS = $(sort $(dir $(wildcard $(PROJECT_DOC_DIR)/demos/*/.)))
 .PHONY: demos
 demos:
 	@$(call print-from,"Compiling demos",$(PROJECT_NAME),$(DEMOS))
-	@mkdir -p $(BUILD_DIR)/demos
+	@mkdir -p $(BUILD_PATH)/demos
 	@for i in $(DEMOS);            \
 	do                             \
 		$(MAKE) -C $$i all;        \

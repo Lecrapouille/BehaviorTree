@@ -40,7 +40,6 @@
 #include <cassert>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -1497,7 +1496,8 @@ public:
     //! \param[in] p_name Name used to identify this action.
     //! \param[in] p_func Lambda function implementing the action.
     // ------------------------------------------------------------------------
-    void registerAction(const std::string& p_name, SugarAction::Function p_func)
+    void registerAction(const std::string& p_name,
+                        SugarAction::Function&& p_func)
     {
         registerNode(p_name, [func = std::move(p_func)]() {
             return Node::create<SugarAction>(func);
@@ -1511,7 +1511,7 @@ public:
     //! \param[in] p_blackboard The blackboard to use.
     // ------------------------------------------------------------------------
     void registerAction(const std::string& p_name,
-                        SugarAction::Function p_func,
+                        SugarAction::Function&& p_func,
                         Blackboard::Ptr p_blackboard)
     {
         registerNode(p_name, [func = std::move(p_func), p_blackboard]() {
@@ -1549,7 +1549,7 @@ public:
     //! \param[in] p_func Lambda function implementing the condition.
     // ------------------------------------------------------------------------
     void registerCondition(const std::string& p_name,
-                           Condition::Function p_func)
+                           Condition::Function&& p_func)
     {
         registerNode(p_name, [func = std::move(p_func)]() {
             return Node::create<Condition>(func);
@@ -1564,7 +1564,7 @@ public:
     //! \param[in] p_blackboard The blackboard to use.
     // ------------------------------------------------------------------------
     void registerCondition(const std::string& p_name,
-                           Condition::Function p_func,
+                           Condition::Function&& p_func,
                            Blackboard::Ptr p_blackboard)
     {
         registerNode(p_name, [func = std::move(p_func), p_blackboard]() {

@@ -1,0 +1,101 @@
+#*****************************************************************************
+#! \brief Behavior tree description in YAML format using all available nodes
+#*****************************************************************************
+
+BehaviorTree:
+  Selector:
+    children:
+      # Emergency sequence with ForceSuccess to ensure healing
+      - Sequence:
+          name: "Emergency"
+          children:
+            - Condition:
+                name: "is_low_health"
+            - ForceSuccess:
+                child:
+                  Action:
+                    name: "heal"
+
+      # Combat sequence with Retry and Parallel
+      - Sequence:
+          name: "Combat"
+          children:
+            - Condition:
+                name: "has_enemy"
+            - Parallel:
+                success_threshold: 2
+                failure_threshold: 1
+                children:
+                  - Condition:
+                      name: "has_weapon"
+                  - Condition:
+                      name: "has_ammo"
+                  - Condition:
+                      name: "is_safe_to_fight"
+            - Retry:
+                attempts: 3
+                child:
+                  Action:
+                    name: "fight"
+
+      # Resource gathering with ReactiveSequence
+      - ReactiveSequence:
+          name: "GatherResources"
+          children:
+            - Condition:
+                name: "needs_resources"
+            - Condition:
+                name: "has_tool"
+            - Action:
+                name: "gather"
+
+      # Stateful sequence for crafting
+      - StatefulSequence:
+          name: "Crafting"
+          children:
+            - Condition:
+                name: "has_ingredients"
+            - Action:
+                name: "craft"
+            - Action:
+                name: "store_item"
+
+      # Rest sequence with UntilSuccess
+      - Sequence:
+          name: "Rest"
+          children:
+            - Condition:
+                name: "is_tired"
+            - UntilSuccess:
+                child:
+                  Action:
+                    name: "sleep"
+
+      # Eat sequence with Repeat
+      - Sequence:
+          name: "Eat"
+          children:
+            - Condition:
+                name: "is_hungry"
+            - Repeat:
+                repetitions: 3
+                child:
+                  Action:
+                    name: "eat"
+
+      # Patrol sequence with Inverter
+      - Sequence:
+          name: "Patrol"
+          children:
+            - Inverter:
+                child:
+                  Condition:
+                    name: "is_dangerous"
+            - Action:
+                name: "patrol"
+
+      # Default behavior with ForceFailure
+      - ForceFailure:
+          child:
+            Action:
+              name: "idle"

@@ -53,7 +53,7 @@ SRC_FILES += $(DEMO_FILES)
 ###################################################
 # Set Libraries.
 #
-THIRDPART_LIBS += $(call internal-lib,BehaviorTree)
+INTERNAL_LIBS += $(call internal-lib,BehaviorTree)
 
 ###################################################
 # External dependencies
