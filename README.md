@@ -43,6 +43,8 @@ sudo apt-get install libyaml-cpp-dev libsfml-dev
 git clone https://github.com/Lecrapouille/BehaviorTree --recurse
 cd BehaviorTree
 make -j8
+make viewer -j8
+make demos -j8
 ```
 
 You can optionally install on your operating system:
@@ -73,7 +75,7 @@ Launch this application before running the target application to enable visualiz
 
 Here is an example of what you can see once a tree is discovered:
 
-![BehaviorTreeVisualizer](docs/pics/BehaviorTreeVisualizer.png)
+![BehaviorTreeVisualizer](doc/pics/BehaviorTreeVisualizer.png)
 
 ### 🎮 Run a Demo
 
@@ -852,7 +854,7 @@ while (true)
 
 You should see a real-time visualization of your behavior tree execution, showing the status of each node with color coding (green for SUCCESS, red for FAILURE, and orange for RUNNING).
 
-![BehaviorTreeVisualizer](docs/pics/BehaviorTreeVisualizer.png)
+![BehaviorTreeVisualizer](doc/pics/BehaviorTreeVisualizer.png)
 
 ---
 
