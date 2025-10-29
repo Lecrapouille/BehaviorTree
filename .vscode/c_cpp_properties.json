@@ -2,8 +2,31 @@
     "configurations": [
         {
             "name": "Linux",
-            "intelliSenseMode": "${default}",
-            "compileCommands": "${workspaceFolder}/.vscode/compile_commands.json"
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/build/generated/BehaviorTree",
+                "${workspaceFolder}/build/downloaded"
+            ],
+            "defines": [
+                "COMPILER_NAME=\"g++\"",
+                "UNDEBUG",
+                "_GLIBCXX_ASSERTIONS"
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compileCommands": "${workspaceFolder}/compile_commands.json",
+            "configurationProvider": "ms-vscode.makefile-tools",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/**"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db"
+            }
         }
     ],
     "version": 4
